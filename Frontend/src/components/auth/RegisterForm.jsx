@@ -34,47 +34,54 @@ const RegisterForm = () => {
     phoneNumber: Yup.string().required('Phone number is required'),
 
     // Student specific fields
-   dateOfBirth: Yup.string().when('role', {
-    is: 'student',
-    then: schema =>
-      schema
+    dateOfBirth: Yup.string().when('role', {
+      is: 'student',
+      then: () => Yup.string()
         .required('Date of birth is required')
-        // Optionally: enforce YYYY-MM-DD format
-        .matches(
-          /^\d{4}-\d{2}-\d{2}$/,
-          'Date of birth must be in YYYY-MM-DD format'
-        ),
-    otherwise: schema => schema.notRequired(),
-  }),
+        .matches(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+      otherwise: () => Yup.string().notRequired(),
+    }),
     gender: Yup.string().when('role', {
       is: 'student',
       then: () => Yup.string().oneOf(['male', 'female', 'other'], 'Invalid gender').required('Gender is required'),
-      otherwise: () => Yup.mixed().notRequired(),
+      otherwise: () => Yup.string().notRequired(),
     }),
     cnic: Yup.string().when('role', {
       is: 'student',
       then: () => Yup.string().required('CNIC/ID number is required'),
-      otherwise: () => Yup.mixed().notRequired(),
+      otherwise: () => Yup.string().notRequired(),
     }),
     institution: Yup.string().when('role', {
       is: 'student',
       then: () => Yup.string().required('Institution is required'),
-      otherwise: () => Yup.mixed().notRequired(),
+      otherwise: () => Yup.string().notRequired(),
     }),
     program: Yup.string().when('role', {
       is: 'student',
       then: () => Yup.string().required('Program is required'),
-      otherwise: () => Yup.mixed().notRequired(),
+      otherwise: () => Yup.string().notRequired(),
     }),
-    currentYear: Yup.number().when('role', {
+    currentYear: Yup.mixed().when('role', {
       is: 'student',
       then: () => Yup.number().required('Current year is required'),
       otherwise: () => Yup.mixed().notRequired(),
     }),
-    expectedGraduationYear: Yup.number().when('role', {
+    expectedGraduationYear: Yup.mixed().when('role', {
       is: 'student',
       then: () => Yup.number().required('Expected graduation year is required'),
       otherwise: () => Yup.mixed().notRequired(),
+    }),
+
+    // Donor specific fields
+    donorType: Yup.string().when('role', {
+      is: 'donor',
+      then: () => Yup.string().oneOf(['individual', 'organization'], 'Invalid donor type').required('Donor type is required'),
+      otherwise: () => Yup.string().notRequired(),
+    }),
+    organizationName: Yup.string().when(['role', 'donorType'], {
+      is: (role, donorType) => role === 'donor' && donorType === 'organization',
+      then: () => Yup.string().required('Organization name is required'),
+      otherwise: () => Yup.string().notRequired(),
     }),
   });
 
@@ -102,8 +109,34 @@ const RegisterForm = () => {
       try {
         setLoading(true);
         setServerError('');
-        console.log('Submitting registration with values:', values);
-        await register(values);
+        
+        // Create a copy of values and remove irrelevant fields based on role
+        const submissionValues = { ...values };
+        
+        // If student, remove donor fields
+        if (values.role === 'student') {
+          delete submissionValues.donorType;
+          delete submissionValues.organizationName;
+        }
+        
+        // If donor, remove student fields
+        if (values.role === 'donor') {
+          delete submissionValues.dateOfBirth;
+          delete submissionValues.gender;
+          delete submissionValues.cnic;
+          delete submissionValues.institution;
+          delete submissionValues.program;
+          delete submissionValues.currentYear;
+          delete submissionValues.expectedGraduationYear;
+          
+          // If individual donor, remove organization name
+          if (values.donorType === 'individual') {
+            delete submissionValues.organizationName;
+          }
+        }
+        
+        console.log('Submitting registration with values:', submissionValues);
+        await register(submissionValues);
         navigate('/login', { state: { message: 'Registration successful! Please check your email to verify your account.' } });
       } catch (error) {
         console.error('Registration error:', error);
@@ -135,8 +168,34 @@ const RegisterForm = () => {
 
   // Show a summary of all errors at the top of the form
   const renderErrorSummary = () => {
-    const allErrors = Object.values(formik.errors).filter(Boolean);
+    // Filter errors to only show relevant ones based on role and donorType
+    const relevantErrors = { ...formik.errors };
+    
+    // If student, remove donor field errors
+    if (formik.values.role === 'student') {
+      delete relevantErrors.donorType;
+      delete relevantErrors.organizationName;
+    }
+    
+    // If donor, remove student field errors
+    if (formik.values.role === 'donor') {
+      delete relevantErrors.dateOfBirth;
+      delete relevantErrors.gender;
+      delete relevantErrors.cnic;
+      delete relevantErrors.institution;
+      delete relevantErrors.program;
+      delete relevantErrors.currentYear;
+      delete relevantErrors.expectedGraduationYear;
+      
+      // If individual donor, remove organization field errors
+      if (formik.values.donorType === 'individual') {
+        delete relevantErrors.organizationName;
+      }
+    }
+    
+    const allErrors = Object.values(relevantErrors).filter(Boolean);
     if (allErrors.length === 0) return null;
+    
     return (
       <div className="error-summary">
         <strong>Please fix the following errors:</strong>
