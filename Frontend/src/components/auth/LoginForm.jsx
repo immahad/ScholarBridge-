@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthUtils';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import '../../styles/auth.css';
 
 const LoginForm = () => {
@@ -11,6 +12,7 @@ const LoginForm = () => {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   
   // Check for messages coming from other pages (e.g., after registration)
   const message = location.state?.message || '';
@@ -54,6 +56,10 @@ const LoginForm = () => {
     },
   });
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
     <div className="auth-form-container">
       <div className="auth-form-wrapper">
@@ -81,15 +87,25 @@ const LoginForm = () => {
 
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              className="form-control"
-              value={formik.values.password}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                className="form-control"
+                value={formik.values.password}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+              <button 
+                type="button" 
+                className="password-toggle-btn"
+                onClick={togglePasswordVisibility}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
             {formik.touched.password && formik.errors.password && (
               <div className="error-text">{formik.errors.password}</div>
             )}

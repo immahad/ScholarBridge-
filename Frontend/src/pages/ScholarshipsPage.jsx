@@ -1,36 +1,38 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiFilter, FiSearch, FiCalendar, FiDollarSign, FiBookOpen } from 'react-icons/fi';
-import { scholarshipService } from '../services/api';
+// Import will be used when API calls are uncommented
+// import { scholarshipService } from '../services/api';
 import '../styles/scholarships.css';
 
 const ScholarshipsPage = () => {
   const [scholarships, setScholarships] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Will be used when API calls are uncommented
+  const [error] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     category: '',
     minAmount: '',
     maxAmount: '',
   });
+  // Comment out the actual API call for now since we're using mock data
+  // useEffect(() => {
+  //   const fetchScholarships = async () => {
+  //     try {
+  //       setLoading(true);
+  //       const response = await scholarshipService.getAllScholarships();
+  //       setScholarships(response.data);
+  //     } catch (err) {
+  //       console.error('Failed to fetch scholarships:', err);
+  //       setError('Failed to load scholarships. Please try again later.');
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
-  useEffect(() => {
-    const fetchScholarships = async () => {
-      try {
-        setLoading(true);
-        const response = await scholarshipService.getAllScholarships();
-        setScholarships(response.data);
-      } catch (err) {
-        console.error('Failed to fetch scholarships:', err);
-        setError('Failed to load scholarships. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchScholarships();
-  }, []);
+  //   fetchScholarships();
+  // }, []);
 
   // For demo purposes, we'll use mock data
   useEffect(() => {

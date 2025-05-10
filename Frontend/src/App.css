@@ -1,19 +1,22 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  overflow-x: hidden;
 }
 
 .logo {
-  height: 6em;
-  padding: 1.5em;
+  height: 2.5rem;
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 1em rgba(52, 152, 219, 0.6));
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -34,7 +37,16 @@
 }
 
 .card {
-  padding: 2em;
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
 }
 
 .read-the-docs {
@@ -45,27 +57,122 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  width: 100%;
 }
 
 .main-content {
   flex: 1;
+  width: 100%;
 }
 
 .success-message {
-  background-color: rgba(40, 167, 69, 0.1);
+  background-color: rgba(46, 204, 113, 0.1);
   color: var(--success);
-  padding: 0.75rem;
-  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+  border-radius: 6px;
   margin-bottom: 1rem;
   text-align: center;
+  border-left: 4px solid var(--success);
+}
+
+.error-message {
+  background-color: rgba(231, 76, 60, 0.1);
+  color: var(--danger);
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  text-align: center;
+  border-left: 4px solid var(--danger);
 }
 
 .text-right {
   text-align: right;
 }
 
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
 .forgot-password-link {
   font-size: 0.875rem;
   display: inline-block;
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
+  color: var(--primary-color);
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
+}
+
+/* Flex utilities */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-1 {
+  gap: 0.25rem;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.gap-6 {
+  gap: 1.5rem;
+}
+
+/* Margin utilities */
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.my-4 {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 1rem;
+  }
 }

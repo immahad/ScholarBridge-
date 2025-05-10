@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiMenu, FiX, FiLogOut, FiUser, FiHome, FiSearch, FiInfo, FiDollarSign } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthUtils';
 import '../../styles/navbar.css';
@@ -8,6 +8,24 @@ const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 20) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    
+    // Clean up the event listener
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -24,10 +42,10 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="navbar">
+    <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="container navbar-container">
         <Link to="/" className="navbar-logo">
-          <img src="/logo.png" alt="Scholarship Management System" className="logo-img" />
+          <img src="/images/ScholarBridge-Logo.png" alt="ScholarBridge" className="logo-img" />
           <span className="logo-text">ScholarSync</span>
         </Link>
 

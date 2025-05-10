@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthUtils';
+import { FaEye, FaEyeSlash, FaCheck } from 'react-icons/fa';
 import '../../styles/auth.css';
 
 const RegisterForm = () => {
@@ -11,6 +12,9 @@ const RegisterForm = () => {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
   const [step, setStep] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordsMatch, setPasswordsMatch] = useState(false);
 
   // Form validation schema
   const registerSchema = Yup.object().shape({
@@ -76,21 +80,34 @@ const RegisterForm = () => {
       program: '',
       currentYear: '',
       expectedGraduationYear: '',
+      donorType: 'individual',
+      organizationName: '',
     },
     validationSchema: registerSchema,
     onSubmit: async (values) => {
       try {
         setLoading(true);
         setServerError('');
+        console.log('Submitting registration with values:', values);
         await register(values);
         navigate('/login', { state: { message: 'Registration successful! Please check your email to verify your account.' } });
       } catch (error) {
+        console.error('Registration error:', error);
         setServerError(error.response?.data?.message || 'Registration failed. Please try again later.');
       } finally {
         setLoading(false);
       }
     },
   });
+
+  // Check if passwords match for visual feedback
+  useEffect(() => {
+    if (formik.values.password && formik.values.confirmPassword) {
+      setPasswordsMatch(formik.values.password === formik.values.confirmPassword);
+    } else {
+      setPasswordsMatch(false);
+    }
+  }, [formik.values.password, formik.values.confirmPassword]);
 
   const nextStep = () => {
     // Validate first step fields
@@ -105,11 +122,6 @@ const RegisterForm = () => {
       }
     });
     
-    // Check if passwords match
-    if (formik.values.password !== formik.values.confirmPassword) {
-      errors.confirmPassword = 'Passwords must match';
-    }
-    
     // Update formik errors
     formik.setErrors({...formik.errors, ...errors});
     
@@ -117,6 +129,20 @@ const RegisterForm = () => {
     if (Object.keys(errors).length === 0) {
       setStep(2);
     }
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  // Handle form submission directly for donor role
+  const handleDonorSubmit = () => {
+    console.log('Submitting donor registration:', formik.values);
+    formik.submitForm();
   };
 
   return (
@@ -215,15 +241,25 @@ const RegisterForm = () => {
 
               <div className="form-group">
                 <label htmlFor="password">Password</label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  className="form-control"
-                  value={formik.values.password}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                />
+                <div className="password-input-wrapper">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    name="password"
+                    className="form-control"
+                    value={formik.values.password}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
+                  <button 
+                    type="button" 
+                    className="password-toggle-btn"
+                    onClick={togglePasswordVisibility}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
                 {formik.touched.password && formik.errors.password && (
                   <div className="error-text">{formik.errors.password}</div>
                 )}
@@ -231,17 +267,36 @@ const RegisterForm = () => {
 
               <div className="form-group">
                 <label htmlFor="confirmPassword">Confirm Password</label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  className="form-control"
-                  value={formik.values.confirmPassword}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                />
+                <div className="password-input-wrapper">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    className="form-control"
+                    value={formik.values.confirmPassword}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
+                  <button 
+                    type="button" 
+                    className="password-toggle-btn"
+                    onClick={toggleConfirmPasswordVisibility}
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
                 {formik.touched.confirmPassword && formik.errors.confirmPassword && (
                   <div className="error-text">{formik.errors.confirmPassword}</div>
+                )}
+                {formik.values.password && formik.values.confirmPassword && (
+                  <div className={passwordsMatch ? "success-text" : "error-text"}>
+                    {passwordsMatch ? (
+                      <><FaCheck /> Passwords match</>
+                    ) : (
+                      'Passwords do not match'
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -398,7 +453,40 @@ const RegisterForm = () => {
 
           {step === 2 && formik.values.role === 'donor' && (
             <div className="auth-step">
-              <p>Please click Register to create your donor account. You'll be able to complete your profile after logging in.</p>
+              <div className="form-group">
+                <label htmlFor="donorType">Donor Type</label>
+                <select
+                  id="donorType"
+                  name="donorType"
+                  className="form-control"
+                  value={formik.values.donorType}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                >
+                  <option value="individual">Individual</option>
+                  <option value="organization">Organization</option>
+                </select>
+              </div>
+              
+              {formik.values.donorType === 'organization' && (
+                <div className="form-group">
+                  <label htmlFor="organizationName">Organization Name</label>
+                  <input
+                    type="text"
+                    id="organizationName"
+                    name="organizationName"
+                    className="form-control"
+                    value={formik.values.organizationName}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
+                  {formik.touched.organizationName && formik.errors.organizationName && (
+                    <div className="error-text">{formik.errors.organizationName}</div>
+                  )}
+                </div>
+              )}
+              
+              <p className="info-text">Please click Register to create your donor account. You'll be able to complete your profile after logging in.</p>
               
               <div className="form-actions">
                 <button
@@ -412,6 +500,7 @@ const RegisterForm = () => {
                   type="submit"
                   className="btn btn-primary"
                   disabled={loading}
+                  onClick={handleDonorSubmit}
                 >
                   {loading ? 'Registering...' : 'Register'}
                 </button>

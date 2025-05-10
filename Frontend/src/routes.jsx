@@ -12,6 +12,7 @@ import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ScholarshipsPage from './pages/ScholarshipsPage';
 import ScholarshipDetailPage from './pages/ScholarshipDetailPage';
+import SupportPage from './pages/SupportPage';
 
 // Student pages
 import StudentDashboard from './pages/student/Dashboard';
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
       { path: 'about', element: <AboutPage /> },
       { path: 'scholarships', element: <ScholarshipsPage /> },
       { path: 'scholarships/:id', element: <ScholarshipDetailPage /> },
+      { path: 'support', element: <SupportPage /> },
       
       // Auth routes
       { path: 'login', element: <LoginForm /> },
@@ -55,6 +57,7 @@ const router = createBrowserRouter([
       { path: 'student/dashboard', element: <StudentDashboard /> },
       { path: 'student/profile', element: <StudentProfile /> },
       { path: 'student/applications', element: <StudentApplications /> },
+      { path: 'student/applications/:id', element: <StudentApplications /> },
       
       // Donor routes
       { path: 'donor/dashboard', element: <DonorDashboard /> },

@@ -1,8 +1,66 @@
 import { Link } from 'react-router-dom';
-import { FiSearch, FiUsers, FiDollarSign, FiAward } from 'react-icons/fi';
+import { useState, useEffect, useRef } from 'react';
+import { FiSearch, FiUsers, FiDollarSign, FiAward, FiBookOpen, FiTrendingUp, FiUsers as FiUsersGroup, FiGlobe } from 'react-icons/fi';
 import '../styles/home.css';
 
 const HomePage = () => {
+  const [countersVisible, setCountersVisible] = useState(false);
+  const statsRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setCountersVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+
+    if (statsRef.current) {
+      observer.observe(statsRef.current);
+    }
+
+    return () => {
+      if (statsRef.current) {
+        observer.disconnect();
+      }
+    };
+  }, []);
+
+  // Animation for counting up
+  const CountUp = ({ end, duration = 2000, prefix = '' }) => {
+    const [count, setCount] = useState(0);
+    const countRef = useRef(0);
+    const startTimeRef = useRef(null);
+
+    useEffect(() => {
+      if (!countersVisible) return;
+
+      const animate = (timestamp) => {
+        if (!startTimeRef.current) startTimeRef.current = timestamp;
+        const progress = timestamp - startTimeRef.current;
+        const percentage = Math.min(progress / duration, 1);
+        
+        countRef.current = Math.floor(percentage * end);
+        setCount(countRef.current);
+
+        if (percentage < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+
+      requestAnimationFrame(animate);
+
+      return () => {
+        startTimeRef.current = null;
+      };
+    }, [countersVisible, end, duration]);
+
+    return <>{prefix}{count.toLocaleString()}</>;
+  };
+
   return (
     <div className="home-page">
       {/* Hero Section */}
@@ -23,7 +81,7 @@ const HomePage = () => {
             </div>
           </div>
           <div className="hero-image">
-            <img src="/hero-image.jpg" alt="Students celebrating graduation" />
+            <img src="/images/shutterstock_Graduation.original.jpg" alt="Students celebrating graduation" />
           </div>
         </div>
       </section>
@@ -74,23 +132,44 @@ const HomePage = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="stats-section">
+      <section className="stats-section" ref={statsRef}>
         <div className="container">
+          <h2 className="section-title">Our Impact</h2>
           <div className="stats-grid">
-            <div className="stat-item">
-              <h3 className="stat-number">1000+</h3>
+            <div className={`stat-item ${countersVisible ? 'visible' : ''}`}>
+              <div className="stat-icon blue">
+                <FiBookOpen />
+              </div>
+              <h3 className="stat-number">
+                {countersVisible ? <CountUp end={1000} /> : '0'}+
+              </h3>
               <p className="stat-label">Active Scholarships</p>
             </div>
-            <div className="stat-item">
-              <h3 className="stat-number">$5M+</h3>
+            <div className={`stat-item ${countersVisible ? 'visible' : ''}`}>
+              <div className="stat-icon purple">
+                <FiDollarSign />
+              </div>
+              <h3 className="stat-number">
+                {countersVisible ? <CountUp end={5} prefix="$" /> : '$0'}M+
+              </h3>
               <p className="stat-label">Awarded Funds</p>
             </div>
-            <div className="stat-item">
-              <h3 className="stat-number">5000+</h3>
+            <div className={`stat-item ${countersVisible ? 'visible' : ''}`}>
+              <div className="stat-icon orange">
+                <FiUsersGroup />
+              </div>
+              <h3 className="stat-number">
+                {countersVisible ? <CountUp end={5000} /> : '0'}+
+              </h3>
               <p className="stat-label">Students Helped</p>
             </div>
-            <div className="stat-item">
-              <h3 className="stat-number">300+</h3>
+            <div className={`stat-item ${countersVisible ? 'visible' : ''}`}>
+              <div className="stat-icon green">
+                <FiGlobe />
+              </div>
+              <h3 className="stat-number">
+                {countersVisible ? <CountUp end={300} /> : '0'}+
+              </h3>
               <p className="stat-label">Partner Institutions</p>
             </div>
           </div>
