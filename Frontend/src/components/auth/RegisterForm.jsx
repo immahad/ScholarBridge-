@@ -34,33 +34,47 @@ const RegisterForm = () => {
     phoneNumber: Yup.string().required('Phone number is required'),
 
     // Student specific fields
-    dateOfBirth: Yup.date().when('role', {
-      is: 'student',
-      then: () => Yup.date().required('Date of birth is required'),
-    }),
+   dateOfBirth: Yup.string().when('role', {
+    is: 'student',
+    then: schema =>
+      schema
+        .required('Date of birth is required')
+        // Optionally: enforce YYYY-MM-DD format
+        .matches(
+          /^\d{4}-\d{2}-\d{2}$/,
+          'Date of birth must be in YYYY-MM-DD format'
+        ),
+    otherwise: schema => schema.notRequired(),
+  }),
     gender: Yup.string().when('role', {
       is: 'student',
       then: () => Yup.string().oneOf(['male', 'female', 'other'], 'Invalid gender').required('Gender is required'),
+      otherwise: () => Yup.mixed().notRequired(),
     }),
     cnic: Yup.string().when('role', {
       is: 'student',
       then: () => Yup.string().required('CNIC/ID number is required'),
+      otherwise: () => Yup.mixed().notRequired(),
     }),
     institution: Yup.string().when('role', {
       is: 'student',
       then: () => Yup.string().required('Institution is required'),
+      otherwise: () => Yup.mixed().notRequired(),
     }),
     program: Yup.string().when('role', {
       is: 'student',
       then: () => Yup.string().required('Program is required'),
+      otherwise: () => Yup.mixed().notRequired(),
     }),
     currentYear: Yup.number().when('role', {
       is: 'student',
       then: () => Yup.number().required('Current year is required'),
+      otherwise: () => Yup.mixed().notRequired(),
     }),
     expectedGraduationYear: Yup.number().when('role', {
       is: 'student',
       then: () => Yup.number().required('Expected graduation year is required'),
+      otherwise: () => Yup.mixed().notRequired(),
     }),
   });
 
@@ -104,16 +118,41 @@ const RegisterForm = () => {
   useEffect(() => {
     if (formik.values.password && formik.values.confirmPassword) {
       setPasswordsMatch(formik.values.password === formik.values.confirmPassword);
+      // Remove confirmPassword error if they match
+      if (
+        formik.values.password === formik.values.confirmPassword &&
+        formik.errors.confirmPassword === 'Passwords must match'
+      ) {
+        // Remove the error from Formik
+        const newErrors = { ...formik.errors };
+        delete newErrors.confirmPassword;
+        formik.setErrors(newErrors);
+      }
     } else {
       setPasswordsMatch(false);
     }
-  }, [formik.values.password, formik.values.confirmPassword]);
+  }, [formik.values.password, formik.values.confirmPassword, formik]);
+
+  // Show a summary of all errors at the top of the form
+  const renderErrorSummary = () => {
+    const allErrors = Object.values(formik.errors).filter(Boolean);
+    if (allErrors.length === 0) return null;
+    return (
+      <div className="error-summary">
+        <strong>Please fix the following errors:</strong>
+        <ul>
+          {allErrors.map((err, idx) => (
+            <li key={idx}>{err}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
 
   const nextStep = () => {
     // Validate first step fields
     const fields = ['firstName', 'lastName', 'email', 'password', 'confirmPassword', 'role', 'phoneNumber'];
     const errors = {};
-    
     fields.forEach(field => {
       try {
         registerSchema.fields[field].validateSync(formik.values[field]);
@@ -121,13 +160,23 @@ const RegisterForm = () => {
         errors[field] = error.message;
       }
     });
-    
+    // Remove confirmPassword error if passwords match
+    if (
+      formik.values.password === formik.values.confirmPassword &&
+      errors.confirmPassword === 'Passwords must match'
+    ) {
+      delete errors.confirmPassword;
+    }
     // Update formik errors
-    formik.setErrors({...formik.errors, ...errors});
-    
+    formik.setErrors({ ...formik.errors, ...errors });
     // If no errors in these fields, go to next step
-    if (Object.keys(errors).length === 0) {
+    const hasStepErrors = fields.some(field => errors[field]);
+    if (!hasStepErrors) {
       setStep(2);
+    } else {
+      // Show a toast/alert if there are errors
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      alert('Please fix the errors before proceeding.');
     }
   };
 
@@ -149,7 +198,7 @@ const RegisterForm = () => {
     <div className="auth-form-container">
       <div className="auth-form-wrapper">
         <h2 className="auth-title">Create an Account</h2>
-        
+        {renderErrorSummary()}
         {serverError && <div className="error-message">{serverError}</div>}
         
         <form onSubmit={formik.handleSubmit} className="auth-form">
@@ -517,4 +566,4 @@ const RegisterForm = () => {
   );
 };
 
-export default RegisterForm; 
+export default RegisterForm;
