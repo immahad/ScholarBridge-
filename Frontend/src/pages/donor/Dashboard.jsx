@@ -2,105 +2,86 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiDollarSign, FiUsers, FiBarChart2, FiFileText, FiCheckCircle, FiArrowRight, FiFilePlus } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthUtils';
+import axios from 'axios';
 import '../../styles/dashboard.css';
 
 const DonorDashboard = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalDonated: 0,
     studentsHelped: 0,
-    activeScholarships: 0,
-    pendingStudents: 0
+    eligibleStudentsCount: 0,
   });
   const [donations, setDonations] = useState([]);
   const [chartData, setChartData] = useState({
     months: [],
     values: []
   });
+  const [welcomeName, setWelcomeName] = useState('Donor');
 
   useEffect(() => {
-    // Mock data - in a real app, this would be an API call
-    const fetchDonorData = async () => {
+    const fetchDonorDashboardData = async () => {
+      setLoading(true);
       try {
-        // This would be replaced with actual API calls
-        setTimeout(() => {
-          // Mock stats
-          const mockStats = {
-            totalDonated: 32000,
-            studentsHelped: 12,
-            activeScholarships: 8,
-            pendingStudents: 24
-          };
+        if (user?.id) {
+          const userProfileResponse = await axios.get(`/api/donors/profile`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (userProfileResponse.data.success && userProfileResponse.data.donor) {
+            setWelcomeName(userProfileResponse.data.donor.firstName || 'Donor');
+          }
+        }
+
+        const response = await axios.get('/api/donors/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data.success) {
+          const { donationSummary, recentDonations, monthlyDonations, eligibleStudentsCount } = response.data;
           
-          // Mock donations
-          const mockDonations = [
-            {
-              id: 1,
-              studentName: 'Alex Johnson',
-              program: 'Computer Science',
-              institution: 'Stanford University',
-              amount: 5000,
-              date: '2023-12-10',
-              status: 'active'
-            },
-            {
-              id: 2,
-              studentName: 'Maria Garcia',
-              program: 'Mechanical Engineering',
-              institution: 'MIT',
-              amount: 3500,
-              date: '2023-11-15',
-              status: 'active'
-            },
-            {
-              id: 3,
-              studentName: 'James Wilson',
-              program: 'Chemistry',
-              institution: 'UC Berkeley',
-              amount: 4000,
-              date: '2023-10-22',
-              status: 'completed'
-            },
-            {
-              id: 4,
-              studentName: 'Sarah Chen',
-              program: 'Environmental Science',
-              institution: 'University of Washington',
-              amount: 3000,
-              date: '2023-09-05',
-              status: 'completed'
-            },
-            {
-              id: 5,
-              studentName: 'David Kim',
-              program: 'Business Administration',
-              institution: 'Harvard University',
-              amount: 4500,
-              date: '2023-08-18',
-              status: 'completed'
-            }
-          ];
+          setStats({
+            totalDonated: donationSummary?.totalDonated || 0,
+            studentsHelped: donationSummary?.studentsHelped || 0,
+            eligibleStudentsCount: eligibleStudentsCount || 0,
+          });
           
-          // Mock chart data
-          const mockChartData = {
-            months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            values: [0, 0, 0, 0, 0, 0, 0, 3000, 3000, 4000, 3500, 5000]
-          };
+          setDonations(recentDonations.map(d => ({
+            id: d._id,
+            studentName: `${d.student?.firstName || 'N/A'} ${d.student?.lastName || ''}`.trim(),
+            program: d.student?.program || 'N/A',
+            institution: d.student?.institution || 'N/A',
+            amount: d.amount || 0,
+            date: d.donationDate,
+            scholarshipName: d.scholarship?.title || 'N/A'
+          })));
           
-          setStats(mockStats);
-          setDonations(mockDonations);
-          setChartData(mockChartData);
-          setLoading(false);
-        }, 1000);
+          if (monthlyDonations && monthlyDonations.length > 0) {
+            const months = monthlyDonations.map(md => md.month);
+            const values = monthlyDonations.map(md => md.amount);
+            setChartData({ months, values });
+          } else {
+            const defaultMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const defaultValues = Array(12).fill(0);
+            setChartData({ months: defaultMonths, values: defaultValues });
+          }
+
+        } else {
+          console.error('Failed to fetch donor dashboard data:', response.data.message);
+        }
       } catch (error) {
-        console.error('Error fetching donor data:', error);
+        console.error('Error fetching donor dashboard data:', error.response ? error.response.data : error.message);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchDonorData();
-  }, []);
+    if (token) {
+      fetchDonorDashboardData();
+    } else {
+      setLoading(false);
+    }
+  }, [token, user?.id]);
 
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -116,7 +97,6 @@ const DonorDashboard = () => {
     }).format(amount);
   };
 
-  // Function to generate a simple SVG bar chart
   const generateChart = () => {
     const maxValue = Math.max(...chartData.values);
     const barWidth = 100 / chartData.months.length;
@@ -166,7 +146,7 @@ const DonorDashboard = () => {
   return (
     <div className="dashboard-container">
       <h1 className="dashboard-title">Donor Dashboard</h1>
-      <p className="dashboard-welcome">Welcome back, {user?.firstName || 'Donor'}!</p>
+      <p className="dashboard-welcome">Welcome back, {welcomeName}!</p>
       
       {loading ? (
         <div className="loading-spinner">Loading...</div>
@@ -194,22 +174,12 @@ const DonorDashboard = () => {
             </div>
             
             <div className="stat-card">
-              <div className="stat-icon-wrapper purple">
-                <FiCheckCircle className="stat-icon" />
-              </div>
-              <div className="stat-content">
-                <h3 className="stat-value">{stats.activeScholarships}</h3>
-                <p className="stat-label">Active Scholarships</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
               <div className="stat-icon-wrapper orange">
-                <FiUsers className="stat-icon" />
+                <FiFileText className="stat-icon" />
               </div>
               <div className="stat-content">
-                <h3 className="stat-value">{stats.pendingStudents}</h3>
-                <p className="stat-label">Pending Students</p>
+                <h3 className="stat-value">{stats.eligibleStudentsCount}</h3>
+                <p className="stat-label">Eligible Students</p>
               </div>
             </div>
           </div>
@@ -247,9 +217,9 @@ const DonorDashboard = () => {
                         <th>Student</th>
                         <th>Program</th>
                         <th>Institution</th>
+                        <th>Scholarship</th>
                         <th>Amount</th>
                         <th>Date</th>
-                        <th>Status</th>
                         <th>Action</th>
                       </tr>
                     </thead>
@@ -259,13 +229,9 @@ const DonorDashboard = () => {
                           <td>{donation.studentName}</td>
                           <td>{donation.program}</td>
                           <td>{donation.institution}</td>
+                          <td>{donation.scholarshipName}</td>
                           <td>{formatCurrency(donation.amount)}</td>
                           <td>{formatDate(donation.date)}</td>
-                          <td>
-                            <span className={`status-pill status-${donation.status}`}>
-                              {donation.status.charAt(0).toUpperCase() + donation.status.slice(1)}
-                            </span>
-                          </td>
                           <td>
                             <Link to={`/donor/donations/${donation.id}`} className="action-link">
                               View <FiArrowRight />
@@ -292,17 +258,7 @@ const DonorDashboard = () => {
                 </div>
                 <div className="impact-content">
                   <h3>Your contributions are making a difference</h3>
-                  <p>Your generosity has helped {stats.studentsHelped} students pursue their educational dreams. For many of these students, your support has been transformative.</p>
-                  <div className="impact-stats">
-                    <div className="impact-stat">
-                      <span className="stat-number">75%</span>
-                      <span className="stat-label">of your supported students are first-generation college students</span>
-                    </div>
-                    <div className="impact-stat">
-                      <span className="stat-number">90%</span>
-                      <span className="stat-label">graduation rate for scholarship recipients</span>
-                    </div>
-                  </div>
+                  <p>Your generosity has helped {stats.studentsHelped} student{stats.studentsHelped === 1 ? '' : 's'} pursue their educational dreams. For many of these students, your support has been transformative.</p>
                   <Link to="/donor/impact" className="btn btn-outline">View Full Impact Report</Link>
                 </div>
               </div>

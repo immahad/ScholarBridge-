@@ -143,13 +143,20 @@ const educationSchema = new mongoose.Schema({
 const financialInfoSchema = new mongoose.Schema({
   familyIncome: {
     type: Number,
-    required: [true, 'Family income is required'],
     min: [0, 'Family income cannot be negative']
   },
-  familyMembers: {
+  dependentFamilyMembers: {
     type: Number,
-    required: [true, 'Number of family members is required'],
-    min: [1, 'Number of family members must be at least 1']
+    min: [1, 'Number of dependent family members must be at least 1']
+  },
+  fafsaCompleted: {
+    type: Boolean,
+    default: false
+  },
+  externalAidAmount: {
+    type: Number,
+    min: [0, 'External aid amount cannot be negative'],
+    default: 0
   },
   hasSiblingsInSchool: {
     type: Boolean,
@@ -298,6 +305,12 @@ const studentSchema = new mongoose.Schema({
   profileCompleted: {
     type: Boolean,
     default: false
+  },
+  profileCompletionPercentage: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
   },
   bio: {
     type: String,

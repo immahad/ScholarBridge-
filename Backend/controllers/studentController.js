@@ -32,48 +32,60 @@ exports.getProfile = asyncHandler(async (req, res) => {
 exports.updateProfile = asyncHandler(async (req, res) => {
   const studentId = req.user._id;
   
-  // Get profile data from request body
-  const {
-    dateOfBirth,
-    gender,
-    institution,
-    program,
-    currentYear,
-    expectedGraduationYear,
-    currentGPA,
-    address,
-    financialInfo,
-    bio
+  // Destructure all updatable fields from req.body
+  const { 
+    firstName, lastName, phoneNumber, // from User model, if you update them via student profile
+    dateOfBirth, gender, institution, program, currentYear, 
+    expectedGraduationYear, currentGPA, address, financialInfo, bio 
   } = req.body;
-  
-  // Find and update student
-  const student = await Student.findByIdAndUpdate(
-    studentId,
-    {
-      dateOfBirth,
-      gender,
-      institution,
-      program,
-      currentYear,
-      expectedGraduationYear,
-      currentGPA,
-      address,
-      financialInfo,
-      bio,
-      profileCompleted: true, // Mark profile as completed
-      updatedAt: Date.now()
-    },
-    { new: true, runValidators: true }
-  );
-  
+
+  // Prepare the update object for Student model fields
+  const studentProfileUpdates = {
+    dateOfBirth, gender, institution, program, currentYear,
+    expectedGraduationYear, currentGPA, address, financialInfo, bio,
+    profileCompleted: true, // Keep the boolean flag for basic completion
+    updatedAt: Date.now()
+  };
+
+  // Filter out undefined fields to avoid overwriting with null if not provided in request
+  Object.keys(studentProfileUpdates).forEach(key => studentProfileUpdates[key] === undefined && delete studentProfileUpdates[key]);
+  if (financialInfo) {
+    Object.keys(financialInfo).forEach(key => financialInfo[key] === undefined && delete financialInfo[key]);
+  }
+  if (address) {
+    Object.keys(address).forEach(key => address[key] === undefined && delete address[key]);
+  }
+
+  // Find student to apply updates and then calculate completion
+  let student = await Student.findById(studentId);
   if (!student) {
     throw createError('Student profile not found', 404);
   }
+
+  // Apply User fields updates (firstName, lastName, phoneNumber) if they are part of the student profile update process
+  // These fields are on the parent User model, so handle their update carefully.
+  // For simplicity, assuming they are sent in req.body and we update them directly on the student instance if changed.
+  // This part might need adjustment based on how User fields are managed (e.g., separate endpoint or specific logic here).
+  if (firstName !== undefined && student.firstName !== firstName) student.firstName = firstName;
+  if (lastName !== undefined && student.lastName !== lastName) student.lastName = lastName;
+  if (phoneNumber !== undefined && student.phoneNumber !== phoneNumber) student.phoneNumber = phoneNumber;
+
+  // Apply Student-specific fields
+  Object.assign(student, studentProfileUpdates);
+
+  // Recalculate and set the numeric profile completion percentage
+  student.profileCompletionPercentage = calculateProfileCompletion(student); 
+
+  // Save the updated student document
+  await student.save({ runValidators: true });
   
+  // Refetch to ensure all virtuals and populated paths are fresh, though save() should return the updated doc.
+  student = await Student.findById(studentId);
+
   res.status(200).json({
     success: true,
     message: 'Profile updated successfully',
-    student
+    student // This student object now includes the updated profileCompletionPercentage
   });
 });
 
@@ -512,74 +524,153 @@ exports.getApplicationDetails = asyncHandler(async (req, res) => {
  */
 exports.getDashboard = asyncHandler(async (req, res) => {
   const studentId = req.user._id;
-  
-  // Find student
-  const student = await Student.findById(studentId);
-  
+
+  const student = await Student.findById(studentId)
+    .populate('scholarshipApplications.scholarshipId', 'title status amount deadlineDate');
+
   if (!student) {
     throw createError('Student profile not found', 404);
   }
-  
-  // Application statistics
+
+  // Application stats
   const applicationStats = {
-    total: student.scholarshipApplications.length,
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-    funded: 0
+    pending: student.scholarshipApplications.filter(app => app.status === 'pending').length,
+    approved: student.scholarshipApplications.filter(app => app.status === 'approved').length,
+    rejected: student.scholarshipApplications.filter(app => app.status === 'rejected').length,
+    accepted: student.scholarshipApplications.filter(app => app.status === 'accepted').length,
+    funded: student.scholarshipApplications.filter(app => app.status === 'funded').length,
   };
-  
-  // Calculate application statistics
-  student.scholarshipApplications.forEach(app => {
-    applicationStats[app.status] += 1;
-  });
-  
-  // Get recent applications
-  const recentApplications = await Promise.all(
-    student.scholarshipApplications
-      .sort((a, b) => b.appliedAt - a.appliedAt)
+
+  // Recent applications
+  let recentApplications = [];
+  if (student.scholarshipApplications && Array.isArray(student.scholarshipApplications)) {
+    recentApplications = student.scholarshipApplications
+      .sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt)) // Sort by date
       .slice(0, 5)
-      .map(async (app) => {
-        const scholarship = await Scholarship.findById(app.scholarshipId);
-        
+      .map(app => {
+        let scholarshipTitle = 'N/A - Details Missing';
+        let scholarshipAmount = 0;
+
+        if (app.scholarshipId && typeof app.scholarshipId === 'object') {
+          // app.scholarshipId is populated
+          scholarshipTitle = app.scholarshipId.title || 'N/A - Title Missing';
+          scholarshipAmount = app.scholarshipId.amount || 0;
+        } else if (app.scholarshipId) {
+          // app.scholarshipId is likely just an ObjectId (populate failed or partial)
+          scholarshipTitle = 'Scholarship details loading...';
+        }
+
         return {
           _id: app._id,
+          scholarshipTitle,
+          scholarshipAmount,
           status: app.status,
           appliedAt: app.appliedAt,
-          scholarship: scholarship ? {
-            _id: scholarship._id,
-            title: scholarship.title,
-            amount: scholarship.amount
-          } : null
         };
-      })
-  );
-  
-  // Get active scholarships count
-  const activeScholarshipsCount = await Scholarship.countDocuments({
-    status: 'active',
-    deadlineDate: { $gt: new Date() },
-    visible: true
+      });
+  }
+    
+  const activeScholarshipsCount = await Scholarship.countDocuments({ 
+    status: 'active', 
+    deadlineDate: { $gt: new Date() } 
   });
-  
-  // Get profile completion percentage
-  let profileCompletion = 0;
-  
-  if (student.dateOfBirth) profileCompletion += 10;
-  if (student.gender) profileCompletion += 10;
-  if (student.institution) profileCompletion += 10;
-  if (student.program) profileCompletion += 10;
-  if (student.financialInfo && student.financialInfo.familyIncome) profileCompletion += 20;
-  if (student.education && student.education.length > 0) profileCompletion += 20;
-  if (student.address && student.address.city) profileCompletion += 10;
-  if (student.bio) profileCompletion += 10;
-  
+
+  // Use the stored profileCompletionPercentage for the dashboard
+  // The calculateProfileCompletion helper is primarily for updates now.
   res.status(200).json({
     success: true,
-    applicationStats,
-    recentApplications,
-    activeScholarshipsCount,
-    profileCompletion,
-    profileCompleted: student.profileCompleted
+    data: {
+      firstName: student.firstName,
+      applicationStats,
+      recentApplications,
+      activeScholarshipsCount,
+      profileCompletion: student.profileCompletionPercentage, // Use stored numeric percentage
+      profileCompleted: student.profileCompleted, // Boolean flag
+    }
   });
 });
+
+// Helper function to calculate profile completion percentage
+const calculateProfileCompletion = (student) => {
+  let score = 0;
+  const fieldChecks = [
+    { fields: ['firstName', 'lastName'], weight: 1 }, // Assuming lastName is also important for completion
+    { fields: ['dateOfBirth'], weight: 1 },
+    { fields: ['gender'], weight: 1 },
+    { fields: ['cnic'], weight: 1 },
+    { fields: ['phoneNumber'], weight: 1 }, // from User model, student inherits it
+    { 
+      group: 'address',
+      fields: ['street', 'city', 'state', 'postalCode', 'country'], 
+      weight: 1 
+    },
+    { 
+      group: 'educationFields', // Represents core education details on student model
+      fields: ['institution', 'program', 'currentYear', 'expectedGraduationYear'], 
+      weight: 1 
+    },
+    { fields: ['currentGPA'], weight: 1, isNumericOrNull: true },
+    { 
+      group: 'financialInfo',
+      fields: ['familyIncome', 'dependentFamilyMembers', 'fafsaCompleted', 'externalAidAmount'],
+      weight: 2 // Example: Financial info might be weighted more, or less, or 1
+    }
+  ];
+
+  const totalPossibleWeight = fieldChecks.reduce((sum, check) => sum + check.weight, 0);
+  let achievedWeight = 0;
+
+  fieldChecks.forEach(check => {
+    let sectionComplete = true;
+    if (check.group === 'address') {
+      if (!student.address) sectionComplete = false;
+      else {
+        for (const field of check.fields) {
+          if (!student.address[field]) {
+            sectionComplete = false;
+            break;
+          }
+        }
+      }
+    } else if (check.group === 'educationFields'){
+      for (const field of check.fields) {
+        if (!student[field]) {
+          sectionComplete = false;
+          break;
+        }
+      }
+    } else if (check.group === 'financialInfo') {
+      if (!student.financialInfo) sectionComplete = false;
+      else {
+        // For financial info, consider it complete if all specified sub-fields are filled.
+        // Or adjust logic: e.g. at least N fields, or specific ones are mandatory.
+        for (const field of check.fields) {
+          if (student.financialInfo[field] === null || student.financialInfo[field] === undefined) {
+            // For fafsaCompleted (boolean), undefined/null might mean not answered.
+            // For numeric fields like externalAidAmount, 0 is a valid value, null/undefined means not answered.
+            if (field === 'fafsaCompleted' && student.financialInfo[field] === undefined) sectionComplete = false;
+            else if (field !== 'fafsaCompleted' && (student.financialInfo[field] === null || student.financialInfo[field] === undefined)) sectionComplete = false; 
+            if (!sectionComplete) break;
+          }
+        }
+      }
+    } else { // Top-level fields
+      for (const field of check.fields) {
+        if (check.isNumericOrNull) { // for GPA, 0 is valid, null means not entered
+          if (student[field] === undefined || student[field] === null) sectionComplete = false; 
+        } else if (!student[field]) { // For strings, etc.
+          sectionComplete = false;
+        }
+        if (!sectionComplete) break;
+      }
+    }
+    if (sectionComplete) {
+      achievedWeight += check.weight;
+    }
+  });
+
+  if (totalPossibleWeight === 0) return 0; // Avoid division by zero
+  const percentage = Math.round((achievedWeight / totalPossibleWeight) * 100);
+  console.log(`Calculated profile completion: ${percentage}% (Achieved: ${achievedWeight}, Total: ${totalPossibleWeight}) for student ${student._id}`);
+  return percentage;
+};

@@ -82,6 +82,11 @@ const schemas = {
         }),
         otherwise: Joi.number().optional()
       }),
+      currentGPA: Joi.number().min(0).max(4).allow(null).optional().default(null).messages({
+        'number.base': 'GPA must be a number if provided.',
+        'number.min': 'GPA cannot be negative if provided.',
+        'number.max': 'GPA cannot be greater than 4 if provided.'
+      }),
       // Donor fields
       donorType: Joi.alternatives().conditional('role', {
         is: 'donor',
@@ -96,7 +101,7 @@ const schemas = {
         then: Joi.string().required().messages({
           'any.required': 'Organization name is required'
         }),
-        otherwise: Joi.string().optional()
+        otherwise: Joi.string().allow('').optional()
       })
     }),
     
@@ -169,6 +174,11 @@ const schemas = {
         'number.base': 'Expected graduation year must be a number',
         'number.min': 'Expected graduation year must be in the future'
       }),
+      currentGPA: Joi.number().min(0).max(4).allow(null).optional().default(null).messages({
+        'number.base': 'GPA must be a number if provided.',
+        'number.min': 'GPA cannot be negative if provided.',
+        'number.max': 'GPA cannot be greater than 4 if provided.'
+      }),
       address: Joi.object({
         street: Joi.string().required().messages({
           'any.required': 'Street address is required'
@@ -187,15 +197,18 @@ const schemas = {
         })
       }).optional(),
       financialInfo: Joi.object({
-        familyIncome: Joi.number().positive().required().messages({
-          'any.required': 'Family income is required',
-          'number.base': 'Family income must be a number',
-          'number.positive': 'Family income must be positive'
+        familyIncome: Joi.number().positive().empty(null).optional().default(null).messages({
+          'number.base': 'Family income must be a number if provided.',
+          'number.positive': 'Family income must be positive if provided.'
         }),
-        dependentFamilyMembers: Joi.number().integer().min(0).required().messages({
-          'any.required': 'Number of dependent family members is required',
-          'number.base': 'Dependent family members must be a number',
-          'number.min': 'Dependent family members cannot be negative'
+        dependentFamilyMembers: Joi.number().integer().min(0).empty(null).optional().default(null).messages({
+          'number.base': 'Dependent family members must be a number if provided.',
+          'number.min': 'Dependent family members cannot be negative if provided.'
+        }),
+        fafsaCompleted: Joi.boolean().allow(null).optional().default(false),
+        externalAidAmount: Joi.number().min(0).allow(null).optional().default(0).messages({
+          'number.base': 'External aid amount must be a number if provided.',
+          'number.min': 'External aid amount cannot be negative if provided.'
         })
       }).optional()
     }),
@@ -249,8 +262,9 @@ const schemas = {
         then: Joi.string().required().messages({
           'any.required': 'Organization name is required'
         }),
-        otherwise: Joi.string().optional()
+        otherwise: Joi.string().allow('').optional()
       }),
+      bio: Joi.string().trim().allow('').optional(),
       taxId: Joi.string().optional(),
       address: Joi.object({
         street: Joi.string().required().messages({

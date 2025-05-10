@@ -1,40 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { FaCheck, FaExclamationTriangle, FaUser, FaPhone, FaEnvelope, FaGraduationCap, FaMoneyBillWave } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthUtils';
+import axios from 'axios';
 import '../../styles/Profile.css';
 
 const StudentProfile = () => {
-  // eslint-disable-next-line no-unused-vars
-  const { user } = useAuth(); // Keeping for future use but explicitly disabling the linter warning
+  const { user, token } = useAuth();
   const [activeTab, setActiveTab] = useState('basic');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   
   // Form states
   const [basicInfo, setBasicInfo] = useState({
-    firstName: "John",
-    lastName: "Smith",
-    dob: "2000-01-01",
-    gender: "male"
+    firstName: "",
+    lastName: "",
+    dob: "",
+    gender: ""
   });
   
   const [contactInfo, setContactInfo] = useState({
-    email: "john.smith@example.com",
-    phone: "(555) 123-4567",
-    address: "123 Main St",
-    city: "Springfield",
-    state: "IL",
-    zip: "62704"
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    country: ""
   });
   
-  const [educationInfo, setEducationInfo] = useState({
-    school: "State University",
-    major: "Computer Science",
-    degree: "bachelors",
-    gpa: "3.8",
-    gradYear: "2024"
-  });
+  const [educationInfo, setEducationInfo] = useState([{
+    school: "",
+    major: "",
+    degree: "",
+    gpa: "",
+    gradYear: "",
+    currentYear: ""
+  }]);
   
   const [financialInfo, setFinancialInfo] = useState({
     household: "",
@@ -43,34 +46,138 @@ const StudentProfile = () => {
     otherAid: ""
   });
   
-  // Simulate profile completion data
-  const [completionData, setCompletionData] = useState({
-    basicInfo: { completed: true, percentage: 100 },
-    contactDetails: { completed: true, percentage: 100 },
-    education: { completed: true, percentage: 100 },
-    financial: { completed: false, percentage: 0 },
+  // Profile completion data
+  const [profileCompletion, setProfileCompletion] = useState({
+    overall: 0,
+    basicInfo: false,
+    contactDetails: false,
+    education: false,
+    financial: false,
   });
-  
-  // Calculate overall completion percentage
-  const overallCompletionPercentage = 
-    (completionData.basicInfo.percentage + 
-     completionData.contactDetails.percentage + 
-     completionData.education.percentage + 
-     completionData.financial.percentage) / 4;
 
   // Fetch user profile data from backend on component mount
   useEffect(() => {
     const fetchUserProfile = async () => {
-      // In a real application, you would fetch from your API
-      // Example: const response = await axios.get('/api/student/profile');
-      // setBasicInfo(response.data.basicInfo);
-      // etc.
-      
-      // For now, we'll use the default mock data
+      setInitialLoading(true);
+      console.log("Profile.jsx (fetchUserProfile): Using token:", token);
+      try {
+        const response = await axios.get('/api/students/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log("Profile.jsx (fetchUserProfile): Raw API Response:", response);
+
+        if (response.data.success && response.data.student) {
+          const studentData = response.data.student;
+          console.log("Profile.jsx (fetchUserProfile): Student Data Received for form population:", JSON.stringify(studentData, null, 2));
+
+          setBasicInfo({
+            firstName: studentData.firstName || "",
+            lastName: studentData.lastName || "",
+            dob: studentData.dateOfBirth ? studentData.dateOfBirth.split('T')[0] : "",
+            gender: studentData.gender || ""
+          });
+          setContactInfo({
+            email: user?.email || studentData.email || "",
+            phone: studentData.phoneNumber || "",
+            address: studentData.address?.street || "",
+            city: studentData.address?.city || "",
+            state: studentData.address?.state || "",
+            zip: studentData.address?.postalCode || "",
+            country: studentData.address?.country || ""
+          });
+          
+          // Education Info population
+          const eduState = {
+            school: studentData.institution || "",
+            major: studentData.program || "",
+            degree: "",
+            gpa: studentData.currentGPA?.toString() || "",
+            gradYear: studentData.expectedGraduationYear?.toString() || "",
+            currentYear: studentData.currentYear?.toString() || ""
+          };
+          if (studentData.education && studentData.education.length > 0) {
+            const primaryEducation = studentData.education[0];
+            eduState.degree = primaryEducation.degree || "";
+          }
+          setEducationInfo([eduState]);
+          
+          setFinancialInfo({
+            household: studentData.financialInfo?.familyIncome?.toString() || "",
+            dependents: studentData.financialInfo?.dependentFamilyMembers?.toString() || "",
+            fafsa: studentData.financialInfo?.fafsaCompleted ? 'yes' : 'no',
+            otherAid: studentData.financialInfo?.externalAidAmount?.toString() || ""
+          });
+          
+          // Calculate profile completion (this seems okay)
+          setProfileCompletion({
+            overall: studentData.profileCompletionPercentage || 0,
+            basicInfo: !!(studentData.firstName && studentData.lastName && studentData.dateOfBirth && studentData.gender && studentData.cnic && studentData.phoneNumber),
+            contactDetails: !!(studentData.address && studentData.address.street && studentData.address.city && studentData.address.state && studentData.address.postalCode && studentData.address.country),
+            education: !!(studentData.institution && studentData.program && studentData.currentYear && studentData.expectedGraduationYear && studentData.currentGPA !== null && studentData.currentGPA !== undefined),
+            financial: !!(studentData.financialInfo && studentData.financialInfo.familyIncome !== null && studentData.financialInfo.familyIncome !== undefined && studentData.financialInfo.dependentFamilyMembers !== null && studentData.financialInfo.dependentFamilyMembers !== undefined && studentData.financialInfo.fafsaCompleted !== undefined && studentData.financialInfo.externalAidAmount !== null && studentData.financialInfo.externalAidAmount !== undefined)
+          });
+
+        } else {
+          console.error("Failed to fetch profile data", response.data.message);
+          setErrorMessage("Could not load your profile. Please try again.");
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error.response ? error.response.data : error.message);
+        console.error("Profile.jsx: Full error object during fetch:", error);
+        setErrorMessage('An error occurred while loading your profile.');
+      } finally {
+        setInitialLoading(false);
+      }
     };
     
-    fetchUserProfile();
-  }, []);
+    if (token) {
+      fetchUserProfile();
+    } else {
+      setInitialLoading(false);
+      console.warn("Profile.jsx: No token available for fetching profile.");
+      setErrorMessage("You are not authenticated. Please log in.");
+    }
+  }, [token, user?.email]);
+
+  // Helper function to calculate profile completion for display
+  const calculateProfileCompletion = (studentData) => {
+    let completedSections = 0;
+    const totalPotentialSections = 4; // basic, contact, education, financial
+    let actualTotalSections = 0;
+
+    // Basic Info (includes fields from User model like cnic, phoneNumber)
+    if (studentData.firstName && studentData.lastName && studentData.dateOfBirth && studentData.gender && studentData.cnic && studentData.phoneNumber) {
+      completedSections++;
+    }
+    actualTotalSections++;
+
+    // Contact Details
+    if (studentData.address && studentData.address.street && studentData.address.city && studentData.address.state && studentData.address.postalCode && studentData.address.country) {
+      completedSections++;
+    }
+    actualTotalSections++;
+    
+    // Education
+    if (studentData.institution && studentData.program && studentData.currentYear && studentData.expectedGraduationYear && studentData.currentGPA !== null && studentData.currentGPA !== undefined) {
+      completedSections++;
+    }
+    actualTotalSections++;
+
+    // Financial Info (all sub-fields should be considered for the section to be complete for this UI helper)
+    if (studentData.financialInfo && 
+        studentData.financialInfo.familyIncome !== null && studentData.financialInfo.familyIncome !== undefined && 
+        studentData.financialInfo.dependentFamilyMembers !== null && studentData.financialInfo.dependentFamilyMembers !== undefined && 
+        studentData.financialInfo.fafsaCompleted !== undefined &&  // boolean, so undefined is primary check
+        studentData.financialInfo.externalAidAmount !== null && studentData.financialInfo.externalAidAmount !== undefined) {
+      completedSections++;
+    }
+    actualTotalSections++;
+
+    if (actualTotalSections === 0) return { overall: 0 }; // Should not happen if studentData is present
+    return {
+      overall: Math.round((completedSections / actualTotalSections) * 100),
+    };
+  };
   
   // Handle form field changes
   const handleBasicInfoChange = (e) => {
@@ -91,10 +198,10 @@ const StudentProfile = () => {
   
   const handleEducationInfoChange = (e) => {
     const { id, value } = e.target;
-    setEducationInfo({
-      ...educationInfo,
+    setEducationInfo(prev => [{
+      ...prev[0],
       [id]: value
-    });
+    }]);
   };
   
   const handleFinancialInfoChange = (e) => {
@@ -120,42 +227,158 @@ const StudentProfile = () => {
     setSuccessMessage('');
     setErrorMessage('');
     
-    try {
-      // In a real application, you would save to your API
-      // Example: 
-      // let dataToSave;
-      // if (section === 'basic') dataToSave = basicInfo;
-      // else if (section === 'contact') dataToSave = contactInfo;
-      // else if (section === 'education') dataToSave = educationInfo;
-      // else if (section === 'financial') dataToSave = financialInfo;
-      
-      // const response = await axios.put(`/api/student/profile/${section}`, dataToSave);
-      
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update completion data based on section
-      if (section === 'financial' && !completionData.financial.completed) {
-        const updatedCompletionData = {
-          ...completionData,
-          financial: { completed: true, percentage: 100 }
-        };
-        setCompletionData(updatedCompletionData);
+    // Consolidate all profile data into a single object
+    // Ensure all fields expected by the backend Joi schema are present
+    const edu = educationInfo[0] || {}; // handle case where educationInfo might be empty initially
+
+    const dataToSave = {
+      // Basic Info
+      firstName: basicInfo.firstName,
+      lastName: basicInfo.lastName,
+      dateOfBirth: basicInfo.dob,
+      gender: basicInfo.gender,
+
+      // Contact Info
+      phoneNumber: contactInfo.phone,
+      // email is usually part of the user model and not updated here,
+      // or it's taken from user context. Assuming it's not part of this direct student profile update payload
+      // unless your backend schema specifically requires it in the student profile PUT body.
+      // unless your backend schema specifically requires it in the student profile PUT body.
+      address: {
+        street: contactInfo.address,
+        city: contactInfo.city,
+        state: contactInfo.state,
+        postalCode: contactInfo.zip,
+        country: contactInfo.country || "", // Assuming you might add country to contactInfo state and form
+      },
+
+      // Education Info - map from educationInfo state
+      // Joi schema expects institution, program, currentYear, expectedGraduationYear
+      // currentGPA is not directly in the Joi student.profile schema but might be in student model
+      institution: edu.school,
+      program: edu.major,
+      currentYear: edu.currentYear ? parseInt(edu.currentYear, 10) : null, // Ensure it's a number or null
+      expectedGraduationYear: edu.gradYear ? parseInt(edu.gradYear, 10) : null, // Ensure it's a number or null
+      currentGPA: edu.gpa ? parseFloat(edu.gpa) : null, // Uncommented and ensure float or null
+
+      // Financial Info
+      // Joi schema expects financialInfo as an object with familyIncome, dependentFamilyMembers
+      financialInfo: {
+        familyIncome: financialInfo.household ? parseInt(financialInfo.household, 10) : null, // Ensure number or null
+        // Joi schema name: dependentFamilyMembers, frontend state: dependents
+        dependentFamilyMembers: financialInfo.dependents ? parseInt(financialInfo.dependents, 10) : null, // Ensure number or null
+        // fafsaCompleted and externalAidAmount are not in the base student.profile Joi schema,
+        // but were in your previous dataToSave for financial section.
+        // Add them if your backend student model / update logic handles them.
+        fafsaCompleted: financialInfo.fafsa === 'yes', // Uncommented
+        externalAidAmount: financialInfo.otherAid ? parseFloat(financialInfo.otherAid) : 0 // Uncommented, ensure float or 0
       }
+    };
+    
+    // Remove null/undefined address or financialInfo if they are truly optional and should not be sent if empty
+    if (!dataToSave.address.street && !dataToSave.address.city && !dataToSave.address.state && !dataToSave.address.postalCode && !dataToSave.address.country) {
+      delete dataToSave.address; // Or set to null if your backend prefers that for optional objects
+    }
+    if (dataToSave.financialInfo.familyIncome === null && dataToSave.financialInfo.dependentFamilyMembers === null) {
+      delete dataToSave.financialInfo; // Or set to null
+    }
+
+
+    console.log("handleSubmit: Token being sent:", token);
+    console.log("handleSubmit: Data being sent:", JSON.stringify(dataToSave, null, 2));
+
+    try {
+      const response = await axios.put('/api/students/profile', dataToSave, { // Always PUT to the main profile endpoint
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
-      setSuccessMessage(`Your ${section} information has been successfully updated!`);
+      if (response.data.success) {
+        setSuccessMessage(`Your profile information has been successfully updated!`);
+        console.log("handleSubmit: Backend response studentData for state update:", JSON.stringify(response.data.student, null, 2));
+        if (response.data.student) {
+          const studentData = response.data.student;
+          console.log("handleSubmit: Backend response studentData for state update:", JSON.stringify(studentData, null, 2));
+
+          // Basic Info Update
+          setBasicInfo({
+            firstName: studentData.firstName || "",
+            lastName: studentData.lastName || "",
+            dob: studentData.dateOfBirth ? studentData.dateOfBirth.split('T')[0] : "",
+            gender: studentData.gender || ""
+          });
+          setContactInfo({
+            email: user?.email || studentData.email || "",
+            phone: studentData.phoneNumber || "",
+            address: studentData.address?.street || "",
+            city: studentData.address?.city || "",
+            state: studentData.address?.state || "",
+            zip: studentData.address?.postalCode || "",
+            country: studentData.address?.country || ""
+          });
+
+          // Education Info Update - mirror fetchUserProfile logic for consistency
+          const updatedEduState = {
+            school: studentData.institution || "",
+            major: studentData.program || "",
+            degree: "", 
+            gpa: studentData.currentGPA?.toString() || "",
+            gradYear: studentData.expectedGraduationYear?.toString() || "",
+            currentYear: studentData.currentYear?.toString() || ""
+          };
+          if (studentData.education && studentData.education.length > 0) {
+            const primaryEducation = studentData.education[0];
+            updatedEduState.degree = primaryEducation.degree || "";
+          }
+          setEducationInfo([updatedEduState]);
+
+          // Financial Info Update
+          setFinancialInfo({
+            household: studentData.financialInfo?.familyIncome?.toString() || "", 
+            dependents: studentData.financialInfo?.dependentFamilyMembers?.toString() || "",
+            fafsa: studentData.financialInfo?.fafsaCompleted ? 'yes' : 'no',
+            otherAid: studentData.financialInfo?.externalAidAmount?.toString() || ""
+          });
+
+          // Recalculate profile completion based on potentially updated studentData
+          setProfileCompletion(prev => ({ 
+            ...prev, 
+            overall: studentData.profileCompletionPercentage || 0,
+            basicInfo: !!(studentData.firstName && studentData.lastName && studentData.dateOfBirth && studentData.gender && studentData.cnic && studentData.phoneNumber),
+            contactDetails: !!(studentData.address && studentData.address.street && studentData.address.city && studentData.address.state && studentData.address.postalCode && studentData.address.country),
+            education: !!(studentData.institution && studentData.program && studentData.currentYear && studentData.expectedGraduationYear && studentData.currentGPA !== null && studentData.currentGPA !== undefined),
+            financial: !!(studentData.financialInfo && studentData.financialInfo.familyIncome !== null && studentData.financialInfo.familyIncome !== undefined && studentData.financialInfo.dependentFamilyMembers !== null && studentData.financialInfo.dependentFamilyMembers !== undefined && studentData.financialInfo.fafsaCompleted !== undefined && studentData.financialInfo.externalAidAmount !== null && studentData.financialInfo.externalAidAmount !== undefined)
+          }));
+        }
+      } else {
+        // Log the detailed errors if available from Joi
+        if (response.data.errors) {
+          console.error("Joi Validation Errors:", response.data.errors);
+          setErrorMessage(response.data.message + ": " + response.data.errors.join(', '));
+        } else {
+          setErrorMessage(response.data.message || `Failed to update profile information. Please try again.`);
+        }
+      }
     } catch (error) {
-      console.error(`Error updating ${section} information:`, error);
-      setErrorMessage('Failed to update your profile. Please try again.');
+      console.error(`Error updating profile information:`, error.response ? error.response.data : error.message);
+      // Log detailed Joi errors from catch block as well
+      if (error.response && error.response.data && error.response.data.errors) {
+        console.error("Joi Validation Errors (catch):", error.response.data.errors);
+        setErrorMessage(error.response.data.message + ": " + error.response.data.errors.join(', '));
+      } else if (error.response && error.response.data && error.response.data.message) {
+        setErrorMessage(error.response.data.message);
+      } else {
+        setErrorMessage('Failed to update your profile. Please try again.');
+      }
     } finally {
       setLoading(false);
-      
-      // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage('');
       }, 3000);
     }
   };
+
+  // Calculate overall completion percentage
+  const overallCompletionPercentage = profileCompletion.overall;
 
   return (
     <div className="container">
@@ -191,47 +414,47 @@ const StudentProfile = () => {
           </div>
           
           <div className="completion-categories">
-            <div className={`category ${completionData.basicInfo.completed ? 'complete' : 'incomplete'}`}>
+            <div className={`category ${profileCompletion.basicInfo ? 'complete' : 'incomplete'}`}>
               <div className="category-icon">
                 <FaUser />
-                {completionData.basicInfo.completed ? <FaCheck className="check-icon" /> : <FaExclamationTriangle className="warning-icon" />}
+                {profileCompletion.basicInfo ? <FaCheck className="check-icon" /> : <FaExclamationTriangle className="warning-icon" />}
               </div>
               <div className="category-info">
                 <h3>Basic Information</h3>
-                <p>{completionData.basicInfo.completed ? 'Completed' : 'Incomplete'}</p>
+                <p>{profileCompletion.basicInfo ? 'Completed' : 'Incomplete'}</p>
               </div>
             </div>
             
-            <div className={`category ${completionData.contactDetails.completed ? 'complete' : 'incomplete'}`}>
+            <div className={`category ${profileCompletion.contactDetails ? 'complete' : 'incomplete'}`}>
               <div className="category-icon">
                 <FaPhone />
-                {completionData.contactDetails.completed ? <FaCheck className="check-icon" /> : <FaExclamationTriangle className="warning-icon" />}
+                {profileCompletion.contactDetails ? <FaCheck className="check-icon" /> : <FaExclamationTriangle className="warning-icon" />}
               </div>
               <div className="category-info">
                 <h3>Contact Details</h3>
-                <p>{completionData.contactDetails.completed ? 'Completed' : 'Incomplete'}</p>
+                <p>{profileCompletion.contactDetails ? 'Completed' : 'Incomplete'}</p>
               </div>
             </div>
             
-            <div className={`category ${completionData.education.completed ? 'complete' : 'incomplete'}`}>
+            <div className={`category ${profileCompletion.education ? 'complete' : 'incomplete'}`}>
               <div className="category-icon">
                 <FaGraduationCap />
-                {completionData.education.completed ? <FaCheck className="check-icon" /> : <FaExclamationTriangle className="warning-icon" />}
+                {profileCompletion.education ? <FaCheck className="check-icon" /> : <FaExclamationTriangle className="warning-icon" />}
               </div>
               <div className="category-info">
-                <h3>Educational Background</h3>
-                <p>{completionData.education.completed ? 'Completed' : 'Incomplete'}</p>
+                <h3>Education Background</h3>
+                <p>{profileCompletion.education ? 'Completed' : 'Incomplete'}</p>
               </div>
             </div>
             
-            <div className={`category ${completionData.financial.completed ? 'complete' : 'incomplete'}`}>
+            <div className={`category ${profileCompletion.financial ? 'complete' : 'incomplete'}`}>
               <div className="category-icon">
                 <FaMoneyBillWave />
-                {completionData.financial.completed ? <FaCheck className="check-icon" /> : <FaExclamationTriangle className="warning-icon" />}
+                {profileCompletion.financial ? <FaCheck className="check-icon" /> : <FaExclamationTriangle className="warning-icon" />}
               </div>
               <div className="category-info">
                 <h3>Financial Information</h3>
-                <p>{completionData.financial.completed ? 'Completed' : 'Incomplete'}</p>
+                <p>{profileCompletion.financial ? 'Completed' : 'Incomplete'}</p>
               </div>
             </div>
           </div>
@@ -388,6 +611,16 @@ const StudentProfile = () => {
                     onChange={handleContactInfoChange}
                   />
                 </div>
+                <div className="form-group">
+                  <label htmlFor="country">Country</label>
+                  <input 
+                    type="text" 
+                    id="country" 
+                    className="form-control" 
+                    value={contactInfo.country}
+                    onChange={handleContactInfoChange}
+                  />
+                </div>
               </div>
               <button 
                 className="save-button" 
@@ -409,7 +642,7 @@ const StudentProfile = () => {
                     type="text" 
                     id="school" 
                     className="form-control" 
-                    value={educationInfo.school}
+                    value={educationInfo[0].school}
                     onChange={handleEducationInfoChange}
                   />
                 </div>
@@ -419,7 +652,7 @@ const StudentProfile = () => {
                     type="text" 
                     id="major" 
                     className="form-control" 
-                    value={educationInfo.major}
+                    value={educationInfo[0].major}
                     onChange={handleEducationInfoChange}
                   />
                 </div>
@@ -428,7 +661,7 @@ const StudentProfile = () => {
                   <select 
                     id="degree" 
                     className="form-control"
-                    value={educationInfo.degree}
+                    value={educationInfo[0].degree}
                     onChange={handleEducationInfoChange}
                   >
                     <option value="bachelors">Bachelor's</option>
@@ -443,7 +676,7 @@ const StudentProfile = () => {
                     type="text" 
                     id="gpa" 
                     className="form-control" 
-                    value={educationInfo.gpa}
+                    value={educationInfo[0].gpa}
                     onChange={handleEducationInfoChange}
                   />
                 </div>
@@ -453,7 +686,17 @@ const StudentProfile = () => {
                     type="number" 
                     id="gradYear" 
                     className="form-control" 
-                    value={educationInfo.gradYear}
+                    value={educationInfo[0].gradYear}
+                    onChange={handleEducationInfoChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="currentYear">Current Year</label>
+                  <input 
+                    type="number" 
+                    id="currentYear" 
+                    className="form-control" 
+                    value={educationInfo[0].currentYear}
                     onChange={handleEducationInfoChange}
                   />
                 </div>
@@ -482,11 +725,11 @@ const StudentProfile = () => {
                     onChange={handleFinancialInfoChange}
                   >
                     <option value="">Please select</option>
-                    <option value="below25k">Below $25,000</option>
-                    <option value="25k-50k">$25,000 - $50,000</option>
-                    <option value="50k-75k">$50,000 - $75,000</option>
-                    <option value="75k-100k">$75,000 - $100,000</option>
-                    <option value="above100k">Above $100,000</option>
+                    <option value="20000">Below $25,000</option>
+                    <option value="25000">$25,000 - $50,000</option>
+                    <option value="50000">$50,000 - $75,000</option>
+                    <option value="75000">$75,000 - $100,000</option>
+                    <option value="100000">Above $100,000</option>
                   </select>
                 </div>
                 <div className="form-group">

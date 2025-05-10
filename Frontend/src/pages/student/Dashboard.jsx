@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiFileText, FiCheckCircle, FiClock, FiXCircle, FiUser, FiDollarSign, FiInfo } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthUtils';
+import axios from 'axios';
 import '../../styles/dashboard.css';
 
 const StudentDashboard = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -15,75 +16,61 @@ const StudentDashboard = () => {
     rejected: 0,
     confirmed: 0
   });
+  const [profileCompletionPercentage, setProfileCompletionPercentage] = useState(0);
+  const [welcomeName, setWelcomeName] = useState('Student');
 
   useEffect(() => {
-    // Mock data - in a real app, this would be an API call
-    const fetchApplications = async () => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
       try {
-        // This would be replaced with actual API calls
-        setTimeout(() => {
-          const mockApplications = [
-            {
-              id: 1,
-              scholarshipName: 'Engineering Excellence Scholarship',
-              amount: 5000,
-              status: 'pending',
-              appliedDate: '2023-10-15',
-              institution: 'MIT'
-            },
-            {
-              id: 2,
-              scholarshipName: 'Future Leaders Fund',
-              amount: 3500,
-              status: 'approved',
-              appliedDate: '2023-09-20',
-              institution: 'Stanford University'
-            },
-            {
-              id: 3,
-              scholarshipName: 'STEM Diversity Grant',
-              amount: 4000,
-              status: 'confirmed',
-              appliedDate: '2023-08-05',
-              institution: 'UC Berkeley',
-              donorInfo: {
-                name: 'Jane Smith Foundation',
-                email: 'contact@janesmith.org',
-                paymentProof: '/images/payment-confirmation.jpg',
-                message: 'We are happy to support your education journey!'
-              }
-            },
-            {
-              id: 4,
-              scholarshipName: 'Academic Achievement Award',
-              amount: 2000,
-              status: 'rejected',
-              appliedDate: '2023-07-10',
-              institution: 'Harvard University',
-              rejectionReason: 'Limited funds available, highly competitive selection process.'
-            }
-          ];
+        if (user?.id) {
+          const userProfileResponse = await axios.get(`/api/students/profile`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (userProfileResponse.data.success && userProfileResponse.data.student) {
+            setWelcomeName(userProfileResponse.data.student.firstName || 'Student');
+          }
+        }
 
-          setApplications(mockApplications);
+        const response = await axios.get('/api/students/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data.success) {
+          const { applicationStats, recentApplications, profileCompletion } = response.data.data;
           
-          // Calculate stats
-          const stats = mockApplications.reduce((acc, app) => {
-            acc.total += 1;
-            acc[app.status] = (acc[app.status] || 0) + 1;
-            return acc;
-          }, { total: 0, pending: 0, approved: 0, rejected: 0, confirmed: 0 });
+          setApplications(Array.isArray(recentApplications) ? recentApplications.map(app => ({
+            id: app._id,
+            scholarshipName: app.scholarshipTitle || 'N/A',
+            amount: app.scholarshipAmount || 0,
+            status: app.status,
+            appliedDate: app.appliedAt,
+          })) : []);
           
-          setStats(stats);
-          setLoading(false);
-        }, 1000);
+          setStats({
+            total: applicationStats.total || 0,
+            pending: applicationStats.pending || 0,
+            approved: applicationStats.approved || 0,
+            rejected: applicationStats.rejected || 0,
+            confirmed: applicationStats.funded || 0
+          });
+          setProfileCompletionPercentage(profileCompletion || 0);
+        } else {
+          console.error('Failed to fetch dashboard data:', response.data.message);
+        }
       } catch (error) {
-        console.error('Error fetching applications:', error);
+        console.error('Error fetching dashboard data:', error.response ? error.response.data : error.message);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchApplications();
-  }, []);
+    if (token) {
+      fetchDashboardData();
+    } else {
+      setLoading(false);
+    }
+  }, [token, user?.id]);
 
   const getStatusClass = (status) => {
     switch (status) {
@@ -114,7 +101,7 @@ const StudentDashboard = () => {
     <div className="dashboard-container">
       <div className="dashboard-header">
         <h1 className="dashboard-title">Student Dashboard</h1>
-        <p className="dashboard-welcome">Welcome back, {user?.firstName || 'John'}!</p>
+        <p className="dashboard-welcome">Welcome back, {welcomeName}!</p>
       </div>
       
       {loading ? (
@@ -154,6 +141,16 @@ const StudentDashboard = () => {
               </div>
               
               <div className="stat-card">
+                <div className="stat-icon-wrapper purple">
+                  <FiDollarSign className="stat-icon" />
+                </div>
+                <div className="stat-content">
+                  <h3 className="stat-value">{stats.confirmed || 0}</h3>
+                  <p className="stat-label">Funded</p>
+                </div>
+              </div>
+
+              <div className="stat-card">
                 <div className="stat-icon-wrapper red">
                   <FiXCircle className="stat-icon" />
                 </div>
@@ -173,25 +170,25 @@ const StudentDashboard = () => {
               <div className="profile-completion-card">
                 <div className="completion-progress">
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: '75%' }}></div>
+                    <div className="progress-fill" style={{ width: `${profileCompletionPercentage}%` }}></div>
                   </div>
-                  <span className="completion-percentage">75% Complete</span>
+                  <span className="completion-percentage">{profileCompletionPercentage}% Complete</span>
                 </div>
                 
                 <div className="completion-items">
-                  <div className="completion-item completed">
+                  <div className={`completion-item ${profileCompletionPercentage >= 25 ? 'completed' : ''}`}>
                     <FiCheckCircle className="completion-icon" />
                     <span>Basic Information</span>
                   </div>
-                  <div className="completion-item completed">
+                  <div className={`completion-item ${profileCompletionPercentage >= 50 ? 'completed' : ''}`}>
                     <FiCheckCircle className="completion-icon" />
                     <span>Contact Details</span>
                   </div>
-                  <div className="completion-item completed">
+                  <div className={`completion-item ${profileCompletionPercentage >= 75 ? 'completed' : ''}`}>
                     <FiCheckCircle className="completion-icon" />
                     <span>Education Background</span>
                   </div>
-                  <div className="completion-item">
+                  <div className={`completion-item ${profileCompletionPercentage === 100 ? 'completed' : ''}`}>
                     <FiInfo className="completion-icon" />
                     <span>Financial Information</span>
                   </div>
@@ -237,31 +234,7 @@ const StudentDashboard = () => {
                           <span className="detail-label">Applied:</span>
                           <span className="detail-value">{formatDate(app.appliedDate)}</span>
                         </div>
-                        <div className="detail-item">
-                          <span className="detail-label">Institution:</span>
-                          <span className="detail-value">{app.institution}</span>
-                        </div>
                       </div>
-                      
-                      {app.status === 'confirmed' && app.donorInfo && (
-                        <div className="donor-information">
-                          <h4>Donor Information</h4>
-                          <p><strong>Donor:</strong> {app.donorInfo.name}</p>
-                          <p><strong>Contact:</strong> {app.donorInfo.email}</p>
-                          <p><strong>Message:</strong> {app.donorInfo.message}</p>
-                          <div className="payment-proof">
-                            <h5>Payment Confirmation</h5>
-                            <img src={app.donorInfo.paymentProof} alt="Payment Proof" />
-                          </div>
-                        </div>
-                      )}
-                      
-                      {app.status === 'rejected' && app.rejectionReason && (
-                        <div className="rejection-reason">
-                          <h4>Reason for Rejection</h4>
-                          <p>{app.rejectionReason}</p>
-                        </div>
-                      )}
                       
                       <div className="application-actions">
                         <Link to={`/student/applications/${app.id}`} className="btn btn-outline">

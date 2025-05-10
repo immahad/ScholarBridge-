@@ -4,40 +4,49 @@ import AuthContext from './AuthUtils';
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const token = localStorage.getItem('token');
         if (token) {
           const response = await authService.getCurrentUser();
           setUser(response.data.user);
+          const storedUser = localStorage.getItem('user');
+          if (storedUser && !response.data.user) {
+            setUser(JSON.parse(storedUser));
+          }
+        } else {
+          setUser(null);
         }
       } catch (err) {
-        console.error('Failed to fetch user data:', err);
+        console.error('Failed to fetch user data or validate token:', err);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
 
     initAuth();
-  }, []);
+  }, [token]);
 
   const login = async (credentials) => {
     try {
       setError(null);
       const response = await authService.login(credentials);
-      const { token, user } = response.data;
+      const { token: apiToken, user: apiUser } = response.data;
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('token', apiToken);
+      localStorage.setItem('user', JSON.stringify(apiUser));
       
-      setUser(user);
-      return user;
+      setToken(apiToken);
+      setUser(apiUser);
+      return apiUser;
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to login';
       setError(message);
@@ -65,12 +74,14 @@ const AuthProvider = ({ children }) => {
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      setToken(null);
       setUser(null);
     }
   };
 
   const value = {
     user,
+    token,
     loading,
     error,
     login,
