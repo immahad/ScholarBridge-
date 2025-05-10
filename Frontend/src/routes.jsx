@@ -13,6 +13,13 @@ import AboutPage from './pages/AboutPage';
 import ScholarshipsPage from './pages/ScholarshipsPage';
 import ScholarshipDetailPage from './pages/ScholarshipDetailPage';
 import SupportPage from './pages/SupportPage';
+import ContactPage from './pages/ContactPage';
+import HowToApplyPage from './pages/HowToApplyPage';
+import ApplicationTipsPage from './pages/ApplicationTipsPage';
+import ResourcesPage from './pages/ResourcesPage';
+import FAQsPage from './pages/FAQsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 
 // Student pages
 import StudentDashboard from './pages/student/Dashboard';
@@ -46,6 +53,13 @@ const router = createBrowserRouter([
       { path: 'scholarships', element: <ScholarshipsPage /> },
       { path: 'scholarships/:id', element: <ScholarshipDetailPage /> },
       { path: 'support', element: <SupportPage /> },
+      { path: 'contact', element: <ContactPage /> },
+      { path: 'how-to-apply', element: <HowToApplyPage /> },
+      { path: 'tips', element: <ApplicationTipsPage /> },
+      { path: 'resources', element: <ResourcesPage /> },
+      { path: 'faqs', element: <FAQsPage /> },
+      { path: 'privacy', element: <PrivacyPolicyPage /> },
+      { path: 'terms', element: <TermsOfServicePage /> },
       
       // Auth routes
       { path: 'login', element: <LoginForm /> },
