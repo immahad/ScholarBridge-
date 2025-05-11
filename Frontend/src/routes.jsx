@@ -29,6 +29,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminProfile from './pages/admin/Profile';
 import AdminManageScholarships from './pages/admin/ManageScholarships';
 import AdminManageUsers from './pages/admin/ManageUsers';
+import SimpleManageUsers from './pages/admin/SimpleManageUsers';
 
 // Error pages
 import NotFound from './pages/NotFound';
@@ -68,7 +69,12 @@ const router = createBrowserRouter([
       { path: 'admin/dashboard', element: <AdminDashboard /> },
       { path: 'admin/profile', element: <AdminProfile /> },
       { path: 'admin/scholarships', element: <AdminManageScholarships /> },
-      { path: 'admin/users', element: <AdminManageUsers /> },
+      // User management routes (with both URL options)
+      { path: 'admin/users', element: <SimpleManageUsers /> },
+      { path: 'admin/manage-users', element: <SimpleManageUsers /> },
+      
+      // Catch-all route for admin section
+      { path: 'admin/*', element: <AdminDashboard /> },
     ],
   },
 ]);

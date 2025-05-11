@@ -30,7 +30,21 @@ const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setError(null);
-      const response = await authService.login(credentials);
+      // Check if this is an admin login
+      let response;
+      
+      if (credentials.role === 'admin') {
+        // If role is specified as admin, use admin login endpoint
+        const { email, password } = credentials;
+        console.log('Using admin login endpoint with email:', email);
+        response = await authService.adminLogin({ email, password });
+      } else {
+        // Otherwise use regular login
+        console.log('Using regular login endpoint');
+        response = await authService.login(credentials);
+      }
+      
+      console.log('Login response:', response);
       const { token, user } = response.data;
       
       localStorage.setItem('token', token);
@@ -39,6 +53,23 @@ const AuthProvider = ({ children }) => {
       setUser(user);
       return user;
     } catch (err) {
+      console.error('Login error:', err);
+      
+      // Detailed error logging
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Error response data:', err.response.data);
+        console.error('Error response status:', err.response.status);
+        console.error('Error response headers:', err.response.headers);
+      } else if (err.request) {
+        // The request was made but no response was received
+        console.error('Error request:', err.request);
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error message:', err.message);
+      }
+      
       const message = err.response?.data?.message || 'Failed to login';
       setError(message);
       throw err;
@@ -82,4 +113,4 @@ const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export default AuthProvider; 
+export default AuthProvider;

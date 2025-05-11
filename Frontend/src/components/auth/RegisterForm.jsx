@@ -619,6 +619,12 @@ const RegisterForm = () => {
         
         <div className="auth-footer">
           Already have an account? <Link to="/login">Log in</Link>
+          {formik.values.role === 'admin' && (
+            <div className="admin-notice">
+              Admin accounts can only be created by system administrators.
+              Please contact support if you need an admin account.
+            </div>
+          )}
         </div>
       </div>
     </div>

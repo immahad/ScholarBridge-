@@ -5,6 +5,7 @@ const Donor = require('../models/Donor');
 const Scholarship = require('../models/Scholarship');
 const Payment = require('../models/Payment');
 const { generateSystemReport } = require('../services/reportService');
+const userTransactions = require('../database/transactions/userTransactions');
 
 /**
  * Get admin dashboard data with analytics
@@ -579,6 +580,112 @@ exports.deleteScholarship = async (req, res) => {
 };
 
 /**
+ * Activate a user account
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.activateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find and update user
+    const user = await User.findByIdAndUpdate(
+      id,
+      { isActive: true },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'User activated successfully',
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive
+      }
+    });
+  } catch (error) {
+    console.error('Activate user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to activate user',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Deactivate a user account
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.deactivateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Cannot deactivate yourself
+    if (req.user.userId === id) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot deactivate your own account'
+      });
+    }
+    
+    // Find user
+    const user = await User.findById(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Cannot deactivate another admin
+    if (user.role === 'admin' && req.user.userId !== id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot deactivate another admin'
+      });
+    }
+    
+    // Update user
+    user.isActive = false;
+    await user.save();
+    
+    return res.status(200).json({
+      success: true,
+      message: 'User deactivated successfully',
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive
+      }
+    });
+  } catch (error) {
+    console.error('Deactivate user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to deactivate user',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Get all students with pagination and filters
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -913,13 +1020,128 @@ exports.getAllUsers = async (req, res) => {
       User.countDocuments(filter)
     ]);
     
+    // Get additional data for each user type
+    const enhancedUsers = await Promise.all(
+      users.map(async user => {
+        const userData = user.toJSON();
+        
+        if (user.role === 'student') {
+          const student = await Student.findOne({ userId: user._id });
+          if (student) {
+            // Get the latest application status
+            let applicationStatus = 'pending';
+            if (student.scholarshipApplications && student.scholarshipApplications.length > 0) {
+              // Sort applications by date descending to get the latest
+              const sortedApplications = [...student.scholarshipApplications]
+                .sort((a, b) => new Date(b.appliedDate) - new Date(a.appliedDate));
+              
+              applicationStatus = sortedApplications[0].status;
+              
+              // Check if any application is funded
+              const hasFundedApplication = student.scholarshipApplications.some(app => 
+                app.paymentId && app.status === 'approved'
+              );
+              
+              if (hasFundedApplication) {
+                applicationStatus = 'funded';
+              }
+            }
+            
+            return {
+              ...userData,
+              school: student.institution,
+              graduationYear: student.graduationYear,
+              applicationStatus
+            };
+          }
+        } else if (user.role === 'donor') {
+          const donor = await Donor.findOne({ userId: user._id });
+          if (donor) {
+            // Count donations and total amount
+            let donationsMade = 0;
+            let totalDonated = 0;
+            
+            if (donor.donations && donor.donations.length > 0) {
+              donationsMade = donor.donations.length;
+              totalDonated = donor.donations.reduce((sum, donation) => sum + (donation.amount || 0), 0);
+            }
+            
+            return {
+              ...userData,
+              organizationName: donor.organizationName,
+              donationsMade,
+              totalDonated
+            };
+          }
+        }
+        
+        return userData;
+      })
+    );
+    
+    // Calculate statistics for the dashboard
+    const [
+      totalStudents,
+      totalDonors,
+      pendingApplications,
+      approvedApplications,
+      rejectedApplications,
+      fundedStudents,
+      activeDonors,
+      totalDonations
+    ] = await Promise.all([
+      User.countDocuments({ role: 'student', isActive: true }),
+      User.countDocuments({ role: 'donor', isActive: true }),
+      Student.aggregate([
+        { $unwind: { path: '$scholarshipApplications', preserveNullAndEmptyArrays: true } },
+        { $match: { 'scholarshipApplications.status': 'pending' } },
+        { $group: { _id: '$userId', count: { $sum: 1 } } },
+        { $count: 'total' }
+      ]),
+      Student.aggregate([
+        { $unwind: { path: '$scholarshipApplications', preserveNullAndEmptyArrays: true } },
+        { $match: { 'scholarshipApplications.status': 'approved' } },
+        { $group: { _id: '$userId', count: { $sum: 1 } } },
+        { $count: 'total' }
+      ]),
+      Student.aggregate([
+        { $unwind: { path: '$scholarshipApplications', preserveNullAndEmptyArrays: true } },
+        { $match: { 'scholarshipApplications.status': 'rejected' } },
+        { $group: { _id: '$userId', count: { $sum: 1 } } },
+        { $count: 'total' }
+      ]),
+      Student.aggregate([
+        { $unwind: { path: '$scholarshipApplications', preserveNullAndEmptyArrays: true } },
+        { $match: { 'scholarshipApplications.paymentId': { $exists: true, $ne: null } } },
+        { $group: { _id: '$userId' } },
+        { $count: 'total' }
+      ]),
+      Donor.countDocuments({ 'donations.0': { $exists: true } }),
+      Donor.aggregate([
+        { $unwind: { path: '$donations', preserveNullAndEmptyArrays: true } },
+        { $group: { _id: null, total: { $sum: '$donations.amount' } } }
+      ])
+    ]);
+    
+    const statistics = {
+      totalStudents,
+      pendingStudents: pendingApplications[0]?.total || 0,
+      approvedStudents: approvedApplications[0]?.total || 0,
+      rejectedStudents: rejectedApplications[0]?.total || 0,
+      fundedStudents: fundedStudents[0]?.total || 0,
+      totalDonors,
+      activeDonors,
+      totalDonations: totalDonations[0]?.total || 0
+    };
+    
     return res.status(200).json({
       success: true,
-      count: users.length,
+      count: enhancedUsers.length,
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
-      users
+      users: enhancedUsers,
+      statistics
     });
   } catch (error) {
     console.error('Get all users error:', error);
@@ -1096,6 +1318,58 @@ exports.activateUser = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to activate user',
+      error: error.message
+    });  }
+};
+
+/**
+ * Delete user
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const force = req.query.force === 'true';
+    
+    // Find user
+    const user = await User.findById(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Cannot delete another admin
+    if (user.role === 'admin' && req.user.userId !== id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot delete another admin'
+      });
+    }
+    
+    // Use transaction to delete user
+    const result = await userTransactions.deleteUserAccount(id, force);
+    
+    if (result.wasDeactivated) {
+      return res.status(200).json({
+        success: true,
+        message: 'User has related data and was deactivated instead. Use force=true to hard delete.',
+        wasDeactivated: true
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete user',
       error: error.message
     });
   }

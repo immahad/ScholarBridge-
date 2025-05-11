@@ -39,7 +39,18 @@ api.interceptors.response.use(
 // Auth services
 const authService = {
   register: (userData) => api.post('/auth/register', userData),
-  login: (credentials) => api.post('/auth/login', credentials),
+  login: (credentials) => {
+    console.log('Login request payload:', credentials);
+    return api.post('/auth/login', credentials);
+  },
+  adminLogin: (credentials) => {
+    console.log('Admin login request payload:', credentials);
+    return api.post('/auth/admin-login', credentials);
+  },
+  checkAdmin: (email) => {
+    console.log('Check admin request for email:', email);
+    return api.get('/auth/check-admin', { params: { email } });
+  },
   logout: () => api.post('/auth/logout'),
   getCurrentUser: () => api.get('/auth/me'),
   refreshToken: (refreshToken) => api.post('/auth/refresh-token', { refreshToken }),
@@ -62,4 +73,15 @@ const scholarshipService = {
   applyForScholarship: (id, applicationData) => api.post(`/applications/apply/${id}`, applicationData),
 };
 
-export { api, authService, studentService, scholarshipService }; 
+// Admin services
+const adminService = {
+  getDashboard: () => api.get('/admin/dashboard'),
+  getAllUsers: () => api.get('/admin/users'),
+  getUserById: (userId) => api.get(`/admin/users/${userId}`),
+  updateUser: (userId, userData) => api.put(`/admin/users/${userId}`, userData),
+  deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
+  activateUser: (userId) => api.put(`/admin/users/${userId}/activate`),
+  deactivateUser: (userId) => api.put(`/admin/users/${userId}/deactivate`),
+};
+
+export { api, authService, studentService, scholarshipService, adminService };
