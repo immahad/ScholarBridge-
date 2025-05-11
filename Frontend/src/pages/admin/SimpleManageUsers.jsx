@@ -1,35 +1,69 @@
 import React, { useState, useEffect } from 'react';
-import { FiUserCheck, FiUserX, FiDollarSign, FiClock, FiCheckCircle, FiRefreshCw, FiAlertTriangle } from 'react-icons/fi';
+import { 
+  FiUserCheck, 
+  FiUserX, 
+  FiDollarSign, 
+  FiClock, 
+  FiCheckCircle, 
+  FiRefreshCw, 
+  FiAlertTriangle, 
+  FiTrash2, 
+  FiSearch,
+  FiFilter,
+  FiMoon,
+  FiSun
+} from 'react-icons/fi';
 import { toast } from 'react-toastify';
-// Importing adminService but commenting it out as it's not needed for mock data
-// import { adminService } from '../../services/api';
 
 const StudentStatusPill = ({ status }) => {
   const statusConfig = {
-    pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: <FiClock className="mr-1" /> },
-    approved: { bg: 'bg-green-100', text: 'text-green-800', icon: <FiCheckCircle className="mr-1" /> },
-    rejected: { bg: 'bg-red-100', text: 'text-red-800', icon: <FiUserX className="mr-1" /> },
-    funded: { bg: 'bg-blue-100', text: 'text-blue-800', icon: <FiDollarSign className="mr-1" /> }
+    pending: { 
+      bg: 'bg-blue-100', 
+      text: 'text-blue-800', 
+      borderColor: 'border-blue-300',
+      icon: <FiClock className="mr-1.5" size={14} /> 
+    },
+    approved: { 
+      bg: 'bg-green-100', 
+      text: 'text-green-800', 
+      borderColor: 'border-green-300',
+      icon: <FiCheckCircle className="mr-1.5" size={14} /> 
+    },
+    rejected: { 
+      bg: 'bg-red-100', 
+      text: 'text-red-800', 
+      borderColor: 'border-red-300',
+      icon: <FiUserX className="mr-1.5" size={14} /> 
+    },
+    funded: { 
+      bg: 'bg-blue-100', 
+      text: 'text-blue-800', 
+      borderColor: 'border-blue-300',
+      icon: <FiDollarSign className="mr-1.5" size={14} /> 
+    }
   };
 
   const config = statusConfig[status] || statusConfig.pending;
   
   return (
-    <span className={`flex items-center px-2 py-1 rounded-full text-xs ${config.bg} ${config.text}`}>
+    <span className={`flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${config.bg} ${config.text} border ${config.borderColor} shadow-sm`}>
       {config.icon}
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 };
 
-const StatCard = ({ title, value, icon, color }) => (
-  <div className={`bg-white rounded-lg shadow p-4 flex items-center ${color}`}>
-    <div className={`rounded-full p-3 ${color.replace('border-', 'bg-').replace('700', '100')}`}>
+const StatCard = ({ title, value, icon, color, textColor, bgColor, delay }) => (
+  <div 
+    className={`bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-4 flex items-center ${color} transform hover:scale-102 transition-transform stat-card card-hover-effect border-l-4`}
+    style={{ animationDelay: `${delay}s` }}
+  >
+    <div className={`rounded-full p-3 ${bgColor}`}>
       {icon}
     </div>
-    <div className="ml-3">
-      <p className="text-gray-500 text-sm">{title}</p>
-      <p className="text-xl font-semibold">{value}</p>
+    <div className="ml-4">
+      <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">{title}</p>
+      <p className={`text-2xl font-bold ${textColor}`}>{value}</p>
     </div>
   </div>
 );
@@ -38,21 +72,26 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, userName }) => {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto">
-        <h3 className="text-xl font-bold mb-4">Confirm Deletion</h3>
-        <p className="mb-4">
-          Are you sure you want to delete the user <strong>{userName}</strong>? This action cannot be undone.
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md mx-auto w-full transform animate-scaleIn">
+        <div className="flex flex-col items-center mb-6">
+          <div className="bg-rose-100 dark:bg-rose-900/30 p-3 rounded-full mb-4">
+            <FiTrash2 className="text-rose-500 dark:text-rose-400 text-2xl" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-800 dark:text-white">Delete User</h3>
+        </div>
+        <p className="text-center mb-6 text-gray-600 dark:text-gray-300">
+          Are you sure you want to delete <strong className="text-gray-800 dark:text-white">{userName}</strong>? This action cannot be undone.
         </p>
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-center gap-4">
           <button
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+            className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-offset-gray-800"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            className="px-6 py-2 bg-rose-500 text-white font-medium rounded-md hover:bg-rose-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 dark:focus:ring-offset-gray-800"
             onClick={onConfirm}
           >
             Delete
@@ -63,7 +102,141 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, userName }) => {
   );
 };
 
-const SimpleManageUsers = () => {
+const EnhancedManageUsers = () => {  // State for dark/light mode
+  const [darkMode, setDarkMode] = useState(false);
+  
+  // Add custom animations to the component
+  useEffect(() => {
+    // Apply dark mode to document if enabled
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Custom color variables for the required color scheme */
+      :root {
+        --primary-blue: #2563eb;
+        --primary-blue-hover: #1d4ed8;
+        --primary-green: #10b981;
+        --primary-green-hover: #059669;
+        --primary-red: #ef4444;
+        --primary-red-hover: #dc2626;
+        --neutral-white: #ffffff;
+        --neutral-white-hover: #f9fafb;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes scaleIn {
+        from { transform: scale(0.95); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+      @keyframes slideInRight {
+        from { transform: translateX(20px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideInUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .animate-fadeIn {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      .animate-scaleIn {
+        animation: scaleIn 0.3s ease-out;
+      }
+      .animate-slideInRight {
+        animation: slideInRight 0.3s ease-out;
+      }
+      .animate-slideInUp {
+        animation: slideInUp 0.3s ease-out;
+      }
+      .transform.hover\\:scale-102:hover {
+        transform: scale(1.02);
+      }
+      .table-container {
+        animation: fadeIn 0.5s ease-in-out;
+      }
+      .stat-card {
+        animation: slideInUp 0.4s ease-out;
+        transition: all 0.3s ease;
+      }
+      .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+      .delete-btn {
+        transition: all 0.2s;
+      }
+      .delete-btn:hover {
+        transform: scale(1.15);
+      }
+      
+      /* Enhanced table styling */
+      .enhanced-table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        background-color: rgba(37, 99, 235, 0.05);
+      }
+      
+      .enhanced-table tr:hover td {
+        background-color: rgba(37, 99, 235, 0.03);
+      }
+      
+      /* Enhanced card styling */
+      .card-hover-effect {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+      .card-hover-effect:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+      
+      @media (max-width: 768px) {
+        .responsive-table {
+          display: block;
+          width: 100%;
+          overflow-x: auto;
+        }
+        
+        .stat-card {
+          animation-delay: 0s !important;
+        }
+        
+        th, td {
+          padding-left: 0.5rem !important;
+          padding-right: 0.5rem !important;
+        }
+        
+        .tab-container {
+          flex-wrap: wrap;
+        }
+        
+        .search-filter-container {
+          flex-direction: column;
+        }
+        
+        .search-filter-container > div {
+          width: 100% !important;
+          margin-bottom: 0.5rem;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [darkMode]);
+
   // State management
   const [activeTab, setActiveTab] = useState('students');
   const [students, setStudents] = useState([]);
@@ -227,11 +400,40 @@ const SimpleManageUsers = () => {
       // Update local state based on role
       if (userRole === 'student') {
         setStudents(students.filter(student => student._id !== userId));
+        
+        // Update stats
+        setStats(prev => ({
+          ...prev,
+          totalStudents: prev.totalStudents - 1,
+          pendingStudents: students.find(s => s._id === userId && s.applicationStatus === 'pending') ? prev.pendingStudents - 1 : prev.pendingStudents,
+          approvedStudents: students.find(s => s._id === userId && s.applicationStatus === 'approved') ? prev.approvedStudents - 1 : prev.approvedStudents,
+          rejectedStudents: students.find(s => s._id === userId && s.applicationStatus === 'rejected') ? prev.rejectedStudents - 1 : prev.rejectedStudents,
+          fundedStudents: students.find(s => s._id === userId && s.applicationStatus === 'funded') ? prev.fundedStudents - 1 : prev.fundedStudents
+        }));
       } else if (userRole === 'donor') {
+        const donorToDelete = donors.find(d => d._id === userId);
         setDonors(donors.filter(donor => donor._id !== userId));
+        
+        // Update stats
+        if (donorToDelete) {
+          setStats(prev => ({
+            ...prev,
+            totalDonors: prev.totalDonors - 1,
+            activeDonors: donorToDelete.isActive ? prev.activeDonors - 1 : prev.activeDonors,
+            totalDonations: prev.totalDonations - donorToDelete.totalDonated
+          }));
+        }
       }
       
-      toast.success('User successfully deleted');
+      toast.success('User successfully deleted', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
       closeDeleteModal();
       
     } catch (error) {
@@ -267,9 +469,20 @@ const SimpleManageUsers = () => {
           }
           return donor;
         }));
+        
+        // Update activeDonors stat
+        setStats(prev => ({
+          ...prev,
+          activeDonors: isCurrentlyActive 
+            ? prev.activeDonors - 1 
+            : prev.activeDonors + 1
+        }));
       }
       
-      toast.success(`User ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully`);
+      toast.success(`User ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully`, {
+        position: "top-right",
+        autoClose: 2000
+      });
       
     } catch (error) {
       console.error('Error toggling user status:', error);
@@ -300,287 +513,437 @@ const SimpleManageUsers = () => {
     
     return matchesSearch;
   });
-
+  
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Manage Users</h1>
-      </div>
-      
-      {/* Statistics Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {activeTab === 'students' ? (
-          <>
+    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'} transition-colors duration-300`}>
+      <div className="container mx-auto px-4 py-6 max-w-7xl animate-fadeIn">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manage Users</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Administer student and donor accounts</p>
+          </div>
+          
+          {/* Dark Mode Toggle */}
+          <button 
+            onClick={() => setDarkMode(!darkMode)}
+            className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {darkMode ? (
+              <FiSun className="text-yellow-500" size={20} />
+            ) : (
+              <FiMoon className="text-gray-700" size={20} />
+            )}
+          </button>
+        </div>
+          {/* Statistics Section - All in one row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-6">
+          {/* Student Stats */}
+          <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
               title="Total Students" 
               value={stats.totalStudents} 
-              icon={<FiUserCheck size={20} />}
-              color="border-l-4 border-blue-700"
+              icon={<FiUserCheck size={20} className="text-blue-600 dark:text-blue-400" />}
+              color="border-blue-600 dark:border-blue-500"
+              textColor="text-blue-700 dark:text-blue-400"
+              bgColor="bg-blue-100 dark:bg-blue-900/30"
+              delay={0}
             />
+          </div>
+          <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
               title="Pending Applications" 
               value={stats.pendingStudents} 
-              icon={<FiClock size={20} />}
-              color="border-l-4 border-yellow-700"
+              icon={<FiClock size={20} className="text-blue-600 dark:text-blue-400" />}
+              color="border-blue-600 dark:border-blue-500"
+              textColor="text-blue-700 dark:text-blue-400"
+              bgColor="bg-blue-100 dark:bg-blue-900/30"
+              delay={0.1}
             />
+          </div>
+          <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
               title="Approved Students" 
               value={stats.approvedStudents} 
-              icon={<FiCheckCircle size={20} />}
-              color="border-l-4 border-green-700"
+              icon={<FiCheckCircle size={20} className="text-green-600 dark:text-green-400" />}
+              color="border-green-600 dark:border-green-500"
+              textColor="text-green-700 dark:text-green-400"
+              bgColor="bg-green-100 dark:bg-green-900/30"
+              delay={0.2}
             />
+          </div>
+          <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
               title="Funded Students" 
               value={stats.fundedStudents} 
-              icon={<FiDollarSign size={20} />}
-              color="border-l-4 border-purple-700"
+              icon={<FiDollarSign size={20} className="text-blue-600 dark:text-blue-400" />}
+              color="border-blue-600 dark:border-blue-500"
+              textColor="text-blue-700 dark:text-blue-400"
+              bgColor="bg-blue-100 dark:bg-blue-900/30"
+              delay={0.3}
             />
-          </>
-        ) : (
-          <>
+          </div>
+          
+          {/* Donor Stats */}
+          <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
               title="Total Donors" 
               value={stats.totalDonors} 
-              icon={<FiUserCheck size={20} />}
-              color="border-l-4 border-blue-700"
+              icon={<FiUserCheck size={20} className="text-blue-600 dark:text-blue-400" />}
+              color="border-blue-600 dark:border-blue-500"
+              textColor="text-blue-700 dark:text-blue-400"
+              bgColor="bg-blue-100 dark:bg-blue-900/30"
+              delay={0.4}
             />
+          </div>
+          <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
               title="Active Donors" 
               value={stats.activeDonors} 
-              icon={<FiCheckCircle size={20} />}
-              color="border-l-4 border-green-700"
+              icon={<FiCheckCircle size={20} className="text-green-600 dark:text-green-400" />}
+              color="border-green-600 dark:border-green-500"
+              textColor="text-green-700 dark:text-green-400"
+              bgColor="bg-green-100 dark:bg-green-900/30"
+              delay={0.5}
             />
+          </div>
+          <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
               title="Total Donations" 
               value={`$${stats.totalDonations.toLocaleString()}`} 
-              icon={<FiDollarSign size={20} />}
-              color="border-l-4 border-purple-700"
+              icon={<FiDollarSign size={20} className="text-blue-600 dark:text-blue-400" />}
+              color="border-blue-600 dark:border-blue-500"
+              textColor="text-blue-700 dark:text-blue-400"
+              bgColor="bg-blue-100 dark:bg-blue-900/30"
+              delay={0.6}
             />
+          </div>
+          <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
               title="Average Donation" 
               value={stats.activeDonors > 0 ? 
                 `$${Math.round(stats.totalDonations / stats.activeDonors).toLocaleString()}` : 
                 '$0'} 
-              icon={<FiRefreshCw size={20} />}
-              color="border-l-4 border-indigo-700"
-            />
-          </>
-        )}
-      </div>
-      
-      {/* Tabs Navigation */}
-      <div className="flex mb-4 border-b">
-        <button
-          className={`px-4 py-2 font-medium ${
-            activeTab === 'students'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-blue-500'
-          }`}
-          onClick={() => setActiveTab('students')}
-        >
-          Students
-        </button>
-        <button
-          className={`px-4 py-2 font-medium ${
-            activeTab === 'donors'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-blue-500'
-          }`}
-          onClick={() => setActiveTab('donors')}
-        >
-          Donors
-        </button>
-      </div>
-      
-      {/* Search and Filter Section */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-grow">
-            <input
-              type="text"
-              placeholder={`Search ${activeTab}...`}
-              className="w-full p-2 border rounded"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              icon={<FiRefreshCw size={20} className="text-green-600 dark:text-green-400" />}
+              color="border-green-600 dark:border-green-500"
+              textColor="text-green-700 dark:text-green-400"
+              bgColor="bg-green-100 dark:bg-green-900/30"
+              delay={0.7}
             />
           </div>
-          
-          {activeTab === 'students' && (
-            <div>
-              <select 
-                className="p-2 border rounded w-full"
-                value={applicationStatusFilter}
-                onChange={(e) => setApplicationStatusFilter(e.target.value)}
-              >
-                <option value="all">All Applications</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="funded">Funded</option>
-              </select>
+        </div>
+          {/* Tabs Navigation */}
+        <div className="flex mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-2 overflow-hidden tab-container">
+          <button
+            className={`px-6 py-3 font-semibold rounded-lg transition-all duration-300 relative ${
+              activeTab === 'students'
+                ? 'text-white bg-blue-600 shadow-md'
+                : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+            onClick={() => setActiveTab('students')}
+          >
+            <span className="flex items-center">
+              <FiUserCheck className="mr-2" />
+              Students
+            </span>
+          </button>
+          <button
+            className={`px-6 py-3 font-semibold rounded-lg transition-all duration-300 relative ${
+              activeTab === 'donors'
+                ? 'text-white bg-green-600 shadow-md'
+                : 'text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+            onClick={() => setActiveTab('donors')}
+          >
+            <span className="flex items-center">
+              <FiDollarSign className="mr-2" />
+              Donors
+            </span>
+          </button>
+        </div>
+          {/* Search and Filter Section */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md mb-6 transition-all duration-300 hover:shadow-lg animate-slideInUp card-hover-effect">
+          <div className="flex flex-col md:flex-row gap-4 search-filter-container">
+            <div className="flex-grow relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiSearch className="text-blue-400" />
+              </div>
+              <input
+                type="text"
+                placeholder={`Search ${activeTab}...`}
+                className="w-full pl-10 py-3 pr-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          )}
+            
+            {activeTab === 'students' && (
+              <div className="md:w-1/4 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiFilter className="text-blue-400" />
+                </div>
+                <select 
+                  className="w-full py-3 pl-10 pr-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 appearance-none"
+                  value={applicationStatusFilter}
+                  onChange={(e) => setApplicationStatusFilter(e.target.value)}
+                >
+                  <option value="all">All Applications</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="funded">Funded</option>
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Users Table Section */}
+        {loading ? (
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow flex justify-center animate-pulse">
+            <div className="flex items-center space-x-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <p className="text-gray-700 dark:text-gray-300">Loading users...</p>
+            </div>
+          </div>
+        ) : activeTab === 'students' ? (
+          // Students Table
+          filteredStudents.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl text-center shadow-sm animate-fadeIn card-hover-effect">
+              <FiAlertTriangle className="mx-auto text-blue-500 mb-3" size={40} />
+              <p className="text-gray-700 dark:text-gray-300 font-medium">No students found matching your criteria.</p>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">Try adjusting your search filters.</p>
+              <button 
+                onClick={() => {
+                  setSearchTerm('');
+                  setApplicationStatusFilter('all');
+                }}
+                className="mt-4 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors duration-200"
+              >
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-hidden bg-white dark:bg-gray-800 rounded-xl shadow-md table-container card-hover-effect">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 responsive-table enhanced-table">
+                  <thead>
+                    <tr className="bg-blue-50 dark:bg-blue-900/20">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider">Student</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider">School</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider">Graduation</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider">Account</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {filteredStudents.map((student, index) => (
+                      <tr 
+                        key={student._id} 
+                        className={`transition-colors duration-200 ${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-blue-50/30 dark:bg-blue-900/10'}`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap group relative">
+                          <div className="flex items-center space-x-4">
+                            <div className="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-green-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                              {student.firstName[0]}{student.lastName[0]}
+                            </div>
+                            <div className="ml-2">
+                              <div className="text-base font-medium text-gray-900 dark:text-white">{student.firstName} {student.lastName}</div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">{student.email}</div>
+                            </div>
+                              {/* Delete button */}
+                            <button
+                              onClick={() => handleDeleteUser(student._id, `${student.firstName} ${student.lastName}`, 'student')}
+                              className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full absolute right-6 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-200 dark:hover:bg-red-800/50 delete-btn"
+                              aria-label="Delete user"
+                            >
+                              <FiTrash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 dark:text-gray-200">{student.school}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 dark:text-gray-200">{student.graduationYear}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <StudentStatusPill status={student.applicationStatus} />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <button
+                              onClick={() => handleStatusToggle(student._id, student.isActive, 'student')}
+                              className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                                student.isActive ? 'bg-green-500 dark:bg-green-600' : 'bg-red-300 dark:bg-red-600'
+                              }`}
+                              aria-pressed={student.isActive}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
+                                  student.isActive ? 'translate-x-5' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                            <span className={`ml-2 text-sm ${student.isActive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {student.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        ) : (
+          // Donors Table
+          filteredDonors.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl text-center shadow-sm animate-fadeIn card-hover-effect">
+              <FiAlertTriangle className="mx-auto text-green-500 mb-3" size={40} />
+              <p className="text-gray-700 dark:text-gray-300 font-medium">No donors found matching your criteria.</p>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">Try adjusting your search filters.</p>
+              <button 
+                onClick={() => {
+                  setSearchTerm('');
+                }}
+                className="mt-4 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-md hover:bg-green-200 dark:hover:bg-green-800/50 transition-colors duration-200"
+              >
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-hidden bg-white dark:bg-gray-800 rounded-xl shadow-md table-container card-hover-effect">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 responsive-table enhanced-table">
+                  <thead>
+                    <tr className="bg-green-50 dark:bg-green-900/20">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 dark:text-green-300 uppercase tracking-wider">Organization</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 dark:text-green-300 uppercase tracking-wider">Donations</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 dark:text-green-300 uppercase tracking-wider">Total Donated</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 dark:text-green-300 uppercase tracking-wider">Account</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {filteredDonors.map((donor, index) => (
+                      <tr 
+                        key={donor._id} 
+                        className={`transition-colors duration-200 ${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-green-50/30 dark:bg-green-900/10'}`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap group relative">
+                          <div className="flex items-center space-x-4">
+                            <div className="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                              {donor.organizationName ? donor.organizationName[0] : donor.firstName[0]}
+                            </div>
+                            <div className="ml-2">
+                              <div className="text-base font-medium text-gray-900 dark:text-white">
+                                {donor.organizationName || `${donor.firstName} ${donor.lastName}`}
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">{donor.email}</div>
+                            </div>
+                            
+                            {/* Delete button */}
+                            <button
+                              onClick={() => handleDeleteUser(donor._id, donor.organizationName || `${donor.firstName} ${donor.lastName}`, 'donor')}
+                              className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full absolute right-6 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-200 dark:hover:bg-red-800/50 delete-btn"
+                              aria-label="Delete donor"
+                            >
+                              <FiTrash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                              {donor.donationsMade} donations
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-green-700 dark:text-green-400">
+                            ${donor.totalDonated.toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <button
+                              onClick={() => handleStatusToggle(donor._id, donor.isActive, 'donor')}
+                              className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                                donor.isActive ? 'bg-green-500 dark:bg-green-600' : 'bg-red-300 dark:bg-red-600'
+                              }`}
+                              aria-pressed={donor.isActive}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
+                                  donor.isActive ? 'translate-x-5' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                            <span className={`ml-2 text-sm ${donor.isActive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {donor.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        )}
+        
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between mt-6 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
+          <div className="flex-1 flex justify-between sm:hidden">
+            <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+              Previous
+            </button>
+            <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+              Next
+            </button>
+          </div>
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Showing{' '}
+                <span className="font-medium">1</span> to{' '}
+                <span className="font-medium">
+                  {activeTab === 'students' ? filteredStudents.length : filteredDonors.length}
+                </span>{' '}
+                of{' '}
+                <span className="font-medium">
+                  {activeTab === 'students' ? stats.totalStudents : stats.totalDonors}
+                </span>{' '}
+                results
+              </p>
+            </div>
+            <div>
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600">
+                  <span className="sr-only">Previous</span>
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <button className="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/50">
+                  1
+                </button>
+                <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600">
+                  <span className="sr-only">Next</span>
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       </div>
-      
-      {/* Users Table Section */}
-      {loading ? (
-        <div className="bg-white p-8 rounded-lg shadow flex justify-center">
-          <div className="flex items-center space-x-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            <p>Loading users...</p>
-          </div>
-        </div>
-      ) : activeTab === 'students' ? (
-        // Students Table
-        filteredStudents.length === 0 ? (
-          <div className="bg-gray-50 p-6 rounded-md text-center">
-            <FiAlertTriangle className="mx-auto text-yellow-500 mb-2" size={30} />
-            <p className="text-gray-600">No students found matching your criteria.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto bg-white rounded-lg shadow">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Application Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredStudents.map((student) => (
-                  <tr key={student._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {student.firstName} {student.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500">{student.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{student.school || 'Not specified'}</div>
-                      <div className="text-sm text-gray-500">Grad: {student.graduationYear || 'N/A'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <label className="inline-flex items-center cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only peer"
-                          checked={student.isActive}
-                          onChange={() => handleStatusToggle(student._id, student.isActive, 'student')}
-                        />
-                        <div className="relative w-11 h-6 bg-gray-200 peer-checked:bg-green-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        <span className="ms-3 text-sm">{student.isActive ? 'Active' : 'Inactive'}</span>
-                      </label>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StudentStatusPill status={student.applicationStatus} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(student.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button 
-                        className="text-red-600 hover:text-red-900 ml-4"
-                        onClick={() => handleDeleteUser(
-                          student._id, 
-                          `${student.firstName} ${student.lastName}`,
-                          'student'
-                        )}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
-      ) : (
-        // Donors Table
-        filteredDonors.length === 0 ? (
-          <div className="bg-gray-50 p-6 rounded-md text-center">
-            <FiAlertTriangle className="mx-auto text-yellow-500 mb-2" size={30} />
-            <p className="text-gray-600">No donors found matching your criteria.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto bg-white rounded-lg shadow">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Donor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Donations</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredDonors.map((donor) => (
-                  <tr key={donor._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {donor.firstName} {donor.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500">{donor.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{donor.organizationName || 'Individual'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <label className="inline-flex items-center cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only peer"
-                          checked={donor.isActive}
-                          onChange={() => handleStatusToggle(donor._id, donor.isActive, 'donor')}
-                        />
-                        <div className="relative w-11 h-6 bg-gray-200 peer-checked:bg-green-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        <span className="ms-3 text-sm">{donor.isActive ? 'Active' : 'Inactive'}</span>
-                      </label>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">${donor.totalDonated?.toLocaleString() || '0'}</div>
-                      <div className="text-sm text-gray-500">{donor.donationsMade || 0} donations</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(donor.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button 
-                        className="text-red-600 hover:text-red-900 ml-4"
-                        onClick={() => handleDeleteUser(
-                          donor._id, 
-                          donor.organizationName || `${donor.firstName} ${donor.lastName}`,
-                          'donor'
-                        )}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
-      )}
       
       {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal
+      <DeleteConfirmationModal 
         isOpen={deleteModal.isOpen}
         onClose={closeDeleteModal}
         onConfirm={confirmDeleteUser}
@@ -590,4 +953,4 @@ const SimpleManageUsers = () => {
   );
 };
 
-export default SimpleManageUsers;
+export default EnhancedManageUsers;

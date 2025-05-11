@@ -28,7 +28,6 @@ import DonorScholarships from './pages/donor/Scholarships';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminProfile from './pages/admin/Profile';
 import AdminManageScholarships from './pages/admin/ManageScholarships';
-import AdminManageUsers from './pages/admin/ManageUsers';
 import SimpleManageUsers from './pages/admin/SimpleManageUsers';
 
 // Error pages
