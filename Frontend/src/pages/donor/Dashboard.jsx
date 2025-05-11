@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FiDollarSign, FiUsers, FiBarChart2, FiFileText, FiCheckCircle, FiArrowRight, FiFilePlus } from 'react-icons/fi';
+import { FiDollarSign, FiUsers, FiBarChart2, FiFileText, FiCheckCircle, FiArrowRight, FiFilePlus, FiPlusCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthUtils';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import '../../styles/dashboard.css';
 
 const DonorDashboard = () => {
@@ -19,6 +21,9 @@ const DonorDashboard = () => {
     values: []
   });
   const [welcomeName, setWelcomeName] = useState('Donor');
+  const statsRef = useRef(null);
+  const donationChartRef = useRef(null);
+  const recentDonationsTableRef = useRef(null);
 
   useEffect(() => {
     const fetchDonorDashboardData = async () => {
@@ -83,6 +88,94 @@ const DonorDashboard = () => {
     }
   }, [token, user?.id]);
 
+  const addImageToPdf = async (pdf, elementRef, yPos) => {
+    if (!elementRef.current) return yPos;
+    const canvas = await html2canvas(elementRef.current, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      scrollY: -window.scrollY
+    });
+    const imgData = canvas.toDataURL('image/png');
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const imgWidth = imgProps.width;
+    const imgHeight = imgProps.height;
+    const ratio = imgWidth / imgHeight;
+    let newImgWidth = pdfWidth - 20;
+    let newImgHeight = newImgWidth / ratio;
+
+    if (yPos + newImgHeight > pdf.internal.pageSize.getHeight() - 10 && yPos > 20) {
+      pdf.addPage();
+      yPos = 15;
+    }
+
+    pdf.addImage(imgData, 'PNG', 10, yPos, newImgWidth, newImgHeight);
+    return yPos + newImgHeight + 10;
+  };
+
+  const handleGenerateDashboardPdf = async () => {
+    try {
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      let yPos = 15;
+
+      const currentDate = new Date().toLocaleDateString();
+      pdf.setFontSize(10);
+      pdf.text(`Report Generated: ${currentDate}`, pdf.internal.pageSize.getWidth() - 10, 10, { align: 'right' });
+      pdf.setFontSize(18);
+      pdf.text('Donor Report', pdf.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
+      yPos += 10;
+
+      if (statsRef.current) {
+        pdf.setFontSize(14);
+        pdf.text('Summary Statistics', 10, yPos);
+        yPos += 7;
+        yPos = await addImageToPdf(pdf, statsRef, yPos);
+      }
+      
+      if (donationChartRef.current) {
+        pdf.setFontSize(14);
+        if (yPos + 10 > pdf.internal.pageSize.getHeight() -10) { pdf.addPage(); yPos = 15; }
+        pdf.text('Donation History', 10, yPos);
+        yPos += 7;
+        yPos = await addImageToPdf(pdf, donationChartRef, yPos);
+      }
+
+      pdf.setFontSize(14);
+      if (yPos + 10 > pdf.internal.pageSize.getHeight() - 10) { pdf.addPage(); yPos = 15; }
+      pdf.text('Recent Donations', 10, yPos);
+      yPos += 7;
+
+      if (donations.length === 0) {
+        pdf.setFontSize(12);
+        pdf.text('No donations yet.', 10, yPos);
+        yPos += 10;
+      } else if (recentDonationsTableRef.current) {
+        yPos = await addImageToPdf(pdf, recentDonationsTableRef, yPos);
+      }
+
+      let donorNameForFile = 'Donor';
+      if (user) {
+        const firstName = user.firstName || '';
+        const lastName = user.lastName || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        if (fullName) {
+          donorNameForFile = fullName.replace(/\s+/g, '_');
+        }
+      }
+      
+      pdf.save(`ScholarBridge-${donorNameForFile}-Donor-Report.pdf`);
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
+  };
+
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
@@ -102,8 +195,7 @@ const DonorDashboard = () => {
     const barWidth = 100 / chartData.months.length;
     
     return (
-      <div className="donation-chart">
-        <h3 className="chart-title">Donation History</h3>
+      <div className="donation-chart-content">
         <div className="chart-container">
           <svg width="100%" height="200" className="chart">
             {chartData.values.map((value, index) => {
@@ -152,7 +244,7 @@ const DonorDashboard = () => {
         <div className="loading-spinner">Loading...</div>
       ) : (
         <>
-          <div className="dashboard-stats">
+          <div className="dashboard-stats" ref={statsRef}>
             <div className="stat-card">
               <div className="stat-icon-wrapper blue">
                 <FiDollarSign className="stat-icon" />
@@ -187,12 +279,13 @@ const DonorDashboard = () => {
           <div className="dashboard-section">
             <div className="section-header">
               <h2>Donation Analytics</h2>
-              <Link to="/donor/reports" className="btn btn-outline">
-                <FiFileText className="btn-icon" /> Generate Report
-              </Link>
+              <button onClick={handleGenerateDashboardPdf} className="btn btn-outline">
+                <FiFileText className="btn-icon" /> Generate Report (PDF)
+              </button>
             </div>
-            
-            {generateChart()}
+            <div ref={donationChartRef}>
+              {generateChart()}
+            </div>
           </div>
 
           <div className="dashboard-section">
@@ -200,6 +293,9 @@ const DonorDashboard = () => {
               <h2>Recent Donations</h2>
               <Link to="/donor/students" className="btn btn-primary">
                 <FiFilePlus className="btn-icon" /> Donate to More Students
+              </Link>
+              <Link to="/donor/scholarships/create" className="btn btn-secondary" style={{ marginLeft: '1rem' }}>
+                <FiPlusCircle className="btn-icon" /> Create Scholarship
               </Link>
             </div>
             
@@ -210,7 +306,7 @@ const DonorDashboard = () => {
                   <Link to="/donor/students" className="btn btn-secondary">Browse Students</Link>
                 </div>
               ) : (
-                <div className="table-responsive">
+                <div className="table-responsive" ref={recentDonationsTableRef}>
                   <table className="donations-table">
                     <thead>
                       <tr>
@@ -243,25 +339,6 @@ const DonorDashboard = () => {
                   </table>
                 </div>
               )}
-            </div>
-          </div>
-          
-          <div className="dashboard-section">
-            <div className="section-header">
-              <h2>Impact Summary</h2>
-            </div>
-            
-            <div className="impact-summary">
-              <div className="impact-card">
-                <div className="impact-icon">
-                  <FiBarChart2 />
-                </div>
-                <div className="impact-content">
-                  <h3>Your contributions are making a difference</h3>
-                  <p>Your generosity has helped {stats.studentsHelped} student{stats.studentsHelped === 1 ? '' : 's'} pursue their educational dreams. For many of these students, your support has been transformative.</p>
-                  <Link to="/donor/impact" className="btn btn-outline">View Full Impact Report</Link>
-                </div>
-              </div>
             </div>
           </div>
         </>

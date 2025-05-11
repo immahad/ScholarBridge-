@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const scholarshipController = require('../controllers/scholarshipController');
 const { verifyToken } = require('../middleware/auth');
-const { isAdmin } = require('../middleware/roleCheck');
+const { isAdmin, isDonor } = require('../middleware/roleCheck');
 const { validate, schemas } = require('../middleware/validation');
 
 // Public routes
@@ -20,19 +20,23 @@ router.get(
   scholarshipController.getScholarshipStats
 );
 
-// Get all scholarships (public)
+// Get all public scholarships (for the "Find Scholarships" page)
 router.get('/', scholarshipController.getAllScholarships);
 
 // Get scholarship by ID (public)
 router.get('/:id', scholarshipController.getScholarshipById);
 
+// Donor-specific routes
+// Get scholarships created by the logged-in donor
+router.get('/donor', verifyToken, isDonor, scholarshipController.getScholarshipsByDonor);
+
 // Admin routes below
-// Create new scholarship (admin only)
+// Create new scholarship (donor only)
 router.post(
   '/',
   verifyToken,
-  isAdmin,
-  validate(schemas.admin.createScholarship),
+  isDonor, // Allow donors to create scholarships
+  validate(schemas.donor.createScholarship), // Use donor-specific validation schema
   scholarshipController.createScholarship
 );
 
@@ -60,4 +64,4 @@ router.get(
   scholarshipController.getScholarshipApplications
 );
 
-module.exports = router; 
+module.exports = router;

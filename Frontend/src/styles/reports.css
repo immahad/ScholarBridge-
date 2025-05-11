@@ -1,0 +1,136 @@
+.reports-container {
+  padding: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.page-header h1 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.page-header p {
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.card {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.report-params-section h2,
+.report-display-section h2 {
+  font-size: 1.5rem;
+  color: #333;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.75rem;
+}
+
+.param-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.param-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #555;
+}
+
+.param-group input[type="date"] {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.checkbox-group {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
+  accent-color: #2563eb;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.report-summary h3,
+.report-donations-list h3 {
+  font-size: 1.25rem;
+  color: #444;
+  margin-bottom: 1rem;
+  margin-top: 1.5rem;
+}
+
+.report-summary p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.report-summary p svg {
+  color: #2563eb;
+}
+
+.report-donations-list table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.report-donations-list th,
+.report-donations-list td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.report-donations-list th {
+  background-color: #f7f7f7;
+  font-weight: 600;
+  color: #333;
+}
+
+.report-donations-list tbody tr:nth-child(even) {
+  background-color: #fcfcfc;
+}
+
+.report-donations-list tbody tr:hover {
+  background-color: #f0f0f0;
+}
+
+.error-message {
+  color: #d9534f; /* Red for errors */
+  border-color: #d9534f;
+  background-color: #f2dede;
+}
+
+/* Using btn styles from browseStudents.css or a global style */
+/* Ensure .btn, .btn-primary, .btn-outline are defined globally or in an imported sheet */ 

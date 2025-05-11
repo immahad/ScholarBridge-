@@ -9,91 +9,17 @@ const { asyncHandler, createError } = require('../middleware/errorHandler');
  * @access Public
  */
 exports.getAllScholarships = asyncHandler(async (req, res) => {
-  // Pagination
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const skip = (page - 1) * limit;
-  
-  // Filter options
-  const filter = { visible: true };
-  
-  // Status filter (public can only see active scholarships)
-  if (req.query.status) {
-    // Admin can view all statuses
-    if (req.user && req.user.role === 'admin') {
-      filter.status = req.query.status;
-    } else {
-      // Others can only view active scholarships
-      filter.status = 'active';
-    }
-  } else {
-    // By default, only show active scholarships to public
-    if (!req.user || req.user.role !== 'admin') {
-      filter.status = 'active';
-    }
+  try {
+    const scholarships = await Scholarship.find({ visible: true, status: 'active' }); // Fetch only public and active scholarships
+    res.status(200).json({
+      success: true,
+      count: scholarships.length,
+      scholarships,
+    });
+  } catch (error) {
+    console.error('Error fetching public scholarships:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
-  
-  // Amount range filter
-  if (req.query.minAmount) {
-    filter.amount = { $gte: parseFloat(req.query.minAmount) };
-  }
-  
-  if (req.query.maxAmount) {
-    if (filter.amount) {
-      filter.amount.$lte = parseFloat(req.query.maxAmount);
-    } else {
-      filter.amount = { $lte: parseFloat(req.query.maxAmount) };
-    }
-  }
-  
-  // Category filter
-  if (req.query.category) {
-    filter.category = req.query.category;
-  }
-  
-  // Deadline filter (only future deadlines for public)
-  if (!req.user || req.user.role !== 'admin') {
-    filter.deadlineDate = { $gt: new Date() };
-  } else if (req.query.deadlineBefore) {
-    filter.deadlineDate = { $lt: new Date(req.query.deadlineBefore) };
-  } else if (req.query.deadlineAfter) {
-    filter.deadlineDate = { $gt: new Date(req.query.deadlineAfter) };
-  }
-  
-  // Search filter (using text index)
-  if (req.query.search) {
-    filter.$text = { $search: req.query.search };
-  }
-  
-  // Sorting
-  let sort = {};
-  
-  if (req.query.sortBy) {
-    const sortField = req.query.sortBy;
-    const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
-    sort[sortField] = sortOrder;
-  } else {
-    // Default sorting: featured scholarships first, then by deadline
-    sort = { featuredRank: -1, deadlineDate: 1 };
-  }
-  
-  // Execute query with pagination
-  const scholarships = await Scholarship.find(filter)
-    .sort(sort)
-    .skip(skip)
-    .limit(limit);
-  
-  // Get total count for pagination
-  const total = await Scholarship.countDocuments(filter);
-  
-  res.status(200).json({
-    success: true,
-    count: scholarships.length,
-    total,
-    totalPages: Math.ceil(total / limit),
-    currentPage: page,
-    scholarships
-  });
 });
 
 /**
@@ -131,39 +57,60 @@ exports.getScholarshipById = asyncHandler(async (req, res) => {
  * @route POST /api/scholarships
  * @access Private (Admin only)
  */
-exports.createScholarship = asyncHandler(async (req, res) => {
-  // Get scholarship data from request body
-  const {
-    title,
-    description,
-    amount,
-    criteria,
-    deadlineDate,
-    category,
-    tags,
-    status
-  } = req.body;
-  
-  // Create scholarship
-  const scholarship = await Scholarship.create({
-    title,
-    description,
-    amount,
-    criteria,
-    deadlineDate,
-    category,
-    tags,
-    status: status || 'draft',
-    createdBy: req.user._id,
-    startDate: new Date()
-  });
-  
-  res.status(201).json({
-    success: true,
-    message: 'Scholarship created successfully',
-    scholarship
-  });
-});
+exports.createScholarship = async (req, res) => {
+  try {
+    console.log('DEBUG: Incoming scholarship creation body:', req.body);
+
+    const {
+      name,
+      title,
+      description,
+      amount,
+      deadline,
+      category,
+      eligibilityRequirements
+    } = req.body;
+
+    const scholarshipTitle = title || name; // Map 'name' to 'title' if 'title' is missing
+    const scholarshipDeadline = deadline; // Use 'deadline' as 'deadlineDate'
+
+    if (
+      !scholarshipTitle ||
+      !description ||
+      !amount ||
+      !scholarshipDeadline ||
+      !category ||
+      !eligibilityRequirements ||
+      typeof eligibilityRequirements !== 'string' ||
+      eligibilityRequirements.trim() === ''
+    ) {
+      return res.status(400).json({
+        message: 'All fields are required',
+        received: req.body
+      });
+    }
+
+    const newScholarship = new Scholarship({
+      title: scholarshipTitle,
+      description,
+      amount,
+      deadlineDate: scholarshipDeadline, // Map 'deadline' to 'deadlineDate'
+      category,
+      eligibilityRequirements,
+      createdBy: req.user._id,
+    });
+
+    await newScholarship.save();
+
+    res.status(201).json({
+      message: 'Scholarship created successfully',
+      scholarship: newScholarship
+    });
+  } catch (error) {
+    console.error('Error creating scholarship:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
 
 /**
  * Update scholarship
@@ -435,4 +382,24 @@ exports.getScholarshipApplications = asyncHandler(async (req, res) => {
     },
     applications
   });
-}); 
+});
+
+/**
+ * Get scholarships by donor
+ * @route GET /api/scholarships/donor
+ * @access Private (Donor only)
+ */
+exports.getScholarshipsByDonor = asyncHandler(async (req, res) => {
+  try {
+    const donorId = req.user._id; // Get the logged-in donor's ID
+    const scholarships = await Scholarship.find({ createdBy: donorId }); // Fetch scholarships created by this donor
+    res.status(200).json({
+      success: true,
+      count: scholarships.length,
+      scholarships,
+    });
+  } catch (error) {
+    console.error('Error fetching donor scholarships:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});

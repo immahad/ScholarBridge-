@@ -30,9 +30,22 @@ const roleCheck = (roles) => {
 /**
  * Specific role check middlewares for convenience
  */
-const isAdmin = roleCheck('admin');
+const isAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied. Admins only.' });
+  }
+  next();
+};
+
 const isStudent = roleCheck('student');
-const isDonor = roleCheck('donor');
+
+const isDonor = (req, res, next) => {
+  if (!req.user || req.user.role !== 'donor') {
+    return res.status(403).json({ message: 'Access denied. Donors only.' });
+  }
+  next();
+};
+
 const isAdminOrDonor = roleCheck(['admin', 'donor']);
 const isAnyUser = roleCheck(['admin', 'student', 'donor']);
 
@@ -103,4 +116,4 @@ module.exports = {
   isAnyUser,
   isOwnResource,
   hasAdminPermission
-}; 
+};

@@ -30,6 +30,9 @@ import StudentApplications from './pages/student/Applications';
 import DonorDashboard from './pages/donor/Dashboard';
 import DonorProfile from './pages/donor/Profile';
 import DonorScholarships from './pages/donor/Scholarships';
+import BrowseStudents from './pages/donor/BrowseStudents';
+import DonorReports from './pages/donor/Reports';
+import CreateScholarship from './pages/donor/CreateScholarship';
 
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -77,6 +80,9 @@ const router = createBrowserRouter([
       { path: 'donor/dashboard', element: <DonorDashboard /> },
       { path: 'donor/profile', element: <DonorProfile /> },
       { path: 'donor/scholarships', element: <DonorScholarships /> },
+      { path: 'donor/scholarships/create', element: <CreateScholarship /> },
+      { path: 'donor/students', element: <BrowseStudents /> },
+      { path: 'donor/reports', element: <DonorReports /> },
       
       // Admin routes
       { path: 'admin/dashboard', element: <AdminDashboard /> },

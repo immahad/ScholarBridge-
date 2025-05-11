@@ -364,7 +364,17 @@ const schemas = {
       note: Joi.string().max(500).optional().messages({
         'string.max': 'Note cannot exceed 500 characters'
       })
-    })
+    }),
+
+    createScholarship: Joi.object({
+      name: Joi.string().min(2).max(100),
+      title: Joi.string().min(2).max(100),
+      description: Joi.string().required(),
+      amount: Joi.number().required(),
+      deadline: Joi.date().required(),
+      category: Joi.string().required(),
+      eligibilityRequirements: Joi.string().min(1).required(), // case-sensitive
+    }).or('name', 'title') // At least one of name or title is required
   },
   
   // Add admin validation schemas
