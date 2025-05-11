@@ -55,7 +55,7 @@ exports.getScholarshipById = asyncHandler(async (req, res) => {
 /**
  * Create new scholarship
  * @route POST /api/scholarships
- * @access Private (Admin only)
+ * @access Private (Admin and Donor)
  */
 exports.createScholarship = async (req, res) => {
   try {

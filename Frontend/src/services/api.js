@@ -70,18 +70,28 @@ const studentService = {
 const scholarshipService = {
   getAllScholarships: (filters) => api.get('/scholarships', { params: filters }),
   getScholarship: (id) => api.get(`/scholarships/${id}`),
+  createScholarship: (scholarshipData) => api.post('/scholarships', scholarshipData),
+  updateScholarship: (id, scholarshipData) => api.put(`/scholarships/${id}`, scholarshipData),
+  deleteScholarship: (id) => api.delete(`/scholarships/${id}`),
   applyForScholarship: (id, applicationData) => api.post(`/applications/apply/${id}`, applicationData),
 };
 
 // Admin services
 const adminService = {
   getDashboard: () => api.get('/admin/dashboard'),
-  getAllUsers: () => api.get('/admin/users'),
+  getAllUsers: (params) => api.get('/admin/users', { params }),
   getUserById: (userId) => api.get(`/admin/users/${userId}`),
   updateUser: (userId, userData) => api.put(`/admin/users/${userId}`, userData),
   deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
   activateUser: (userId) => api.put(`/admin/users/${userId}/activate`),
   deactivateUser: (userId) => api.put(`/admin/users/${userId}/deactivate`),
+  // Scholarship management endpoints - using the scholarship endpoint directly
+  getAllScholarships: (params) => api.get('/scholarships', { params }),
+  getScholarshipById: (id) => api.get(`/scholarships/${id}`),
+  createScholarship: (scholarshipData) => api.post('/scholarships', scholarshipData),
+  updateScholarship: (id, scholarshipData) => api.put(`/scholarships/${id}`, scholarshipData),
+  deleteScholarship: (id) => api.delete(`/scholarships/${id}`),
+  getScholarshipApplications: (id) => api.get(`/scholarships/${id}/applications`),
 };
 
 export { api, authService, studentService, scholarshipService, adminService };

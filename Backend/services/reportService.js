@@ -9,17 +9,79 @@ const Payment = require('../models/Payment');
  * Generate a comprehensive system report
  * 
  * @param {Object} options - Report options
+ * @param {String} options.reportType - Type of report: 'users', 'scholarships', 'donations', 'applications', or 'comprehensive'
  * @param {Date} options.startDate - Start date for report period
  * @param {Date} options.endDate - End date for report period
  * @returns {Object} The generated report
  */
 exports.generateSystemReport = async (options = {}) => {
-  const { startDate, endDate } = options;
+  const { reportType = 'comprehensive', startDate, endDate } = options;
   
   // Set default date range if not provided (last month)
   const start = startDate ? new Date(startDate) : new Date(new Date().setMonth(new Date().getMonth() - 1));
   const end = endDate ? new Date(endDate) : new Date();
   
+  // Generate specific report types based on reportType parameter
+  if (reportType === 'users') {
+    const userStats = await generateUserReport(start, end);
+    return {
+      generatedAt: new Date(),
+      period: {
+        startDate: start,
+        endDate: end
+      },
+      summary: {
+        totalUsers: userStats.summary.totalUsers,
+        newUsersInPeriod: userStats.summary.newUsersInPeriod,
+      },
+      users: userStats
+    };
+  } 
+  else if (reportType === 'scholarships') {
+    const scholarshipStats = await generateScholarshipReport(start, end);
+    return {
+      generatedAt: new Date(),
+      period: {
+        startDate: start,
+        endDate: end
+      },
+      summary: {
+        totalScholarships: scholarshipStats.summary.totalScholarships,
+      },
+      scholarships: scholarshipStats
+    };
+  }
+  else if (reportType === 'donations') {
+    const donationStats = await generateDonationReport(start, end);
+    return {
+      generatedAt: new Date(),
+      period: {
+        startDate: start,
+        endDate: end
+      },
+      summary: {
+        totalDonations: donationStats.summary.totalDonations,
+        totalDonationAmount: donationStats.summary.totalAmount
+      },
+      donations: donationStats
+    };
+  }
+  else if (reportType === 'applications') {
+    const applicationStats = await generateApplicationReport(start, end);
+    return {
+      generatedAt: new Date(),
+      period: {
+        startDate: start,
+        endDate: end
+      },
+      summary: {
+        totalApplications: applicationStats.summary.totalApplications,
+      },
+      applications: applicationStats
+    };
+  }
+  
+  // Default: comprehensive report
   // Generate report
   const [
     userStats,

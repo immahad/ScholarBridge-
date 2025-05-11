@@ -884,16 +884,16 @@ exports.generateReport = async (req, res) => {
       });
     }
     
-    // Generate report using the service
-    const report = await generateSystemReport(reportType, start, end);
+    // Generate report using the service - pass options as an object
+    const report = await generateSystemReport({
+      reportType,
+      startDate: start, 
+      endDate: end
+    });
     
     return res.status(200).json({
       success: true,
       reportType,
-      dateRange: {
-        startDate: start,
-        endDate: end
-      },
       report
     });
   } catch (error) {
@@ -1394,6 +1394,46 @@ exports.getActivityLog = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to get activity log',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get student by ID
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getStudentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const student = await Student.findById(id).select('-password');
+    
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      });
+    }
+    
+    // Get scholarship applications with details
+    const populatedStudent = await Student.findById(id)
+      .populate({
+        path: 'scholarshipApplications.scholarshipId',
+        select: 'title description amount deadlineDate'
+      })
+      .select('-password');
+    
+    return res.status(200).json({
+      success: true,
+      student: populatedStudent
+    });
+  } catch (error) {
+    console.error('Get student by ID error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get student details',
       error: error.message
     });
   }

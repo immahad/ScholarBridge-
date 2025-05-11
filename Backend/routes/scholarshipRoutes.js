@@ -4,6 +4,7 @@ const scholarshipController = require('../controllers/scholarshipController');
 const { verifyToken } = require('../middleware/auth');
 const { isAdmin, isDonor } = require('../middleware/roleCheck');
 const { validate, schemas } = require('../middleware/validation');
+const { isAdminOrDonor } = require('../middleware/roleCheck');
 
 // Public routes
 // Get featured scholarships (public)
@@ -31,11 +32,11 @@ router.get('/:id', scholarshipController.getScholarshipById);
 router.get('/donor', verifyToken, isDonor, scholarshipController.getScholarshipsByDonor);
 
 // Admin routes below
-// Create new scholarship (donor only)
+// Create new scholarship (both admin and donor can create)
 router.post(
   '/',
   verifyToken,
-  isDonor, // Allow donors to create scholarships
+  isAdminOrDonor, // Use isAdminOrDonor to allow both admin and donors
   validate(schemas.donor.createScholarship), // Use donor-specific validation schema
   scholarshipController.createScholarship
 );

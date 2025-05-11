@@ -44,4 +44,22 @@ router.post(
 // Get admin activity log
 router.get('/activity-log', adminController.getActivityLog);
 
+// Get all students with pagination and filters
+router.get('/students', adminController.getAllStudents);
+
+// Get student by ID
+router.get('/students/:id', adminController.getStudentById);
+
+// Create new scholarship
+router.post('/scholarships', adminController.createScholarship);
+
+// Get all scholarships (including created by donors)
+router.get('/scholarships', adminController.getAllScholarships);
+
+// Get scholarship by ID
+router.get('/scholarships/:id', adminController.getScholarshipById);
+
+// Delete scholarship
+router.delete('/scholarships/:id', adminController.deleteScholarship);
+
 module.exports = router;

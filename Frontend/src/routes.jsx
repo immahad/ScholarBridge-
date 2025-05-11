@@ -39,6 +39,9 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminProfile from './pages/admin/Profile';
 import AdminManageScholarships from './pages/admin/ManageScholarships';
 import SimpleManageUsers from './pages/admin/SimpleManageUsers';
+import AdminBrowseStudents from './pages/admin/BrowseStudents';
+import AdminCreateScholarship from './pages/admin/CreateScholarship';
+import AdminReports from './pages/admin/Reports';
 
 // Error pages
 import NotFound from './pages/NotFound';
@@ -88,9 +91,15 @@ const router = createBrowserRouter([
       { path: 'admin/dashboard', element: <AdminDashboard /> },
       { path: 'admin/profile', element: <AdminProfile /> },
       { path: 'admin/scholarships', element: <AdminManageScholarships /> },
+      { path: 'admin/scholarships/create', element: <AdminCreateScholarship /> },
       // User management routes (with both URL options)
       { path: 'admin/users', element: <SimpleManageUsers /> },
       { path: 'admin/manage-users', element: <SimpleManageUsers /> },
+      // Student browsing for admin
+      { path: 'admin/students', element: <AdminBrowseStudents /> },
+      { path: 'admin/students/:id', element: <AdminBrowseStudents /> },
+      // Report generation
+      { path: 'admin/reports', element: <AdminReports /> },
       
       // Catch-all route for admin section
       { path: 'admin/*', element: <AdminDashboard /> },
