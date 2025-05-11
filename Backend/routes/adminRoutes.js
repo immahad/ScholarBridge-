@@ -25,6 +25,9 @@ router.put('/users/:id/deactivate', adminController.deactivateUser);
 // Activate user
 router.put('/users/:id/activate', adminController.activateUser);
 
+// Delete user
+router.delete('/users/:id', adminController.deleteUser);
+
 // Get admin profile
 router.get('/profile', adminController.getProfile);
 

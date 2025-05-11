@@ -241,6 +241,116 @@ exports.login = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Admin Login - Specialized endpoint for admin users
+ * @route POST /api/auth/admin-login
+ * @access Public
+ */
+exports.adminLogin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  
+  console.log('Admin login attempt for email:', email);
+  
+  // Find user by email and ensure it's an admin
+  const user = await User.findOne({ 
+    email, 
+    role: 'admin' 
+  }).select('+password +loginAttempts +lockedUntil');
+  
+  // If user doesn't exist or is not an admin
+  if (!user) {
+    console.log('Admin login failed: User not found or not an admin');
+    throw createError('Invalid admin credentials', 401);
+  }
+  
+  // Reset login attempts for easier debugging during development
+  if (process.env.NODE_ENV === 'development' && user.loginAttempts > 0) {
+    console.log('Development mode: Resetting login attempts for admin');
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { loginAttempts: 0, lockedUntil: null } }
+    );
+    user.loginAttempts = 0;
+    user.lockedUntil = null;
+  }
+  
+  // Check if account is locked
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    const remainingTime = Math.ceil((user.lockedUntil - new Date()) / (1000 * 60));
+    console.log('Admin login failed: Account is locked until', user.lockedUntil);
+    throw createError(`Account is locked. Please try again in ${remainingTime} minutes.`, 423);
+  }
+  
+  // Check if user is active
+  if (!user.isActive) {
+    console.log('Admin login failed: Account is deactivated');
+    throw createError('Your admin account has been deactivated', 401);
+  }
+  
+  // Check if password matches
+  const isMatch = await user.matchPassword(password);
+  console.log('Password match result:', isMatch);
+  
+  if (!isMatch) {
+    console.log('Admin login failed: Invalid password');
+    // Increment login attempts and possibly lock account
+    await User.incrementLoginAttempts(email);
+    
+    // If this was the 5th attempt, account is now locked
+    if (user.loginAttempts >= 4) {
+      throw createError('Too many failed login attempts. Account is locked for 15 minutes.', 423);
+    }
+    
+    throw createError('Invalid admin credentials', 401);
+  }
+  
+  // Reset login attempts on successful login
+  await User.resetLoginAttempts(user._id);
+  
+  // Ensure we have the Admin model instance
+  const admin = await Admin.findOne({ _id: user._id });
+  
+  if (!admin) {
+    throw createError('Admin profile not found', 404);
+  }
+  
+  // Log the admin login activity
+  await admin.logActivity('login', { method: 'admin-login' }, req);
+  
+  // Generate JWT token with admin-specific claims
+  const token = jwt.sign(
+    { 
+      userId: user._id,
+      role: 'admin',
+      adminLevel: admin.adminLevel,
+      tokenVersion: user.tokenVersion
+    },
+    config.jwt.secret,
+    {
+      expiresIn: config.jwt.expire,
+      issuer: 'scholarship-management-system',
+      audience: 'sms-admins'
+    }
+  );
+  
+  const refreshToken = user.generateRefreshToken();
+  
+  // Remove sensitive data from response
+  const userWithoutPassword = { ...admin.toObject() };
+  delete userWithoutPassword.password;
+  delete userWithoutPassword.verificationToken;
+  delete userWithoutPassword.loginAttempts;
+  delete userWithoutPassword.lockedUntil;
+  
+  res.status(200).json({
+    success: true,
+    message: 'Admin login successful',
+    user: userWithoutPassword,
+    token,
+    refreshToken
+  });
+});
+
+/**
  * Refresh access token using refresh token
  * @route POST /api/auth/refresh-token
  * @access Public
@@ -500,5 +610,27 @@ exports.changePassword = asyncHandler(async (req, res) => {
     message: 'Password changed successfully',
     token,
     refreshToken
+  });
+});
+
+/**
+ * Check if admin exists (for admin login flow)
+ * @route GET /api/auth/check-admin
+ * @access Public
+ */
+exports.checkAdminExists = asyncHandler(async (req, res) => {
+  const { email } = req.query;
+  
+  // Return success regardless of actual result for security reasons
+  let adminExists = false;
+  
+  if (email) {
+    const user = await User.findOne({ email, role: 'admin' });
+    adminExists = !!user;
+  }
+  
+  res.status(200).json({
+    success: true,
+    adminExists
   });
 });

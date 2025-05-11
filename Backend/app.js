@@ -79,6 +79,43 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Debug route to see all registered routes
+app.get('/api/debug/routes', (req, res) => {
+  const routes = [];
+  
+  // Collect all routes
+  app._router.stack.forEach(middleware => {
+    if (middleware.route) { // Routes registered directly on the app
+      routes.push({
+        path: middleware.route.path,
+        methods: Object.keys(middleware.route.methods).join(', ')
+      });
+    } else if (middleware.name === 'router') { // Router middleware
+      middleware.handle.stack.forEach(handler => {
+        if (handler.route) {
+          const path = handler.route.path;
+          const basePath = middleware.regexp.toString()
+            .replace('\\^', '')
+            .replace('\\/?(?=\\/|$)', '')
+            .replace(/\\\//g, '/')
+            .replace('$', '');
+            
+          routes.push({
+            path: basePath + path,
+            methods: Object.keys(handler.route.methods).join(', ')
+          });
+        }
+      });
+    }
+  });
+  
+  res.status(200).json({
+    success: true,
+    count: routes.length,
+    routes
+  });
+});
+
 // Error handling middleware
 app.use(errorHandler);
 

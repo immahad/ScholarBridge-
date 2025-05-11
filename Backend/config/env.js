@@ -3,10 +3,10 @@ const dotenv = require('dotenv');
 // Load environment variables from .env file
 dotenv.config();
 
-// Define required environment variables, but make MONGO_URI optional
+// Define required environment variables
+// We'll make JWT_SECRET and JWT_EXPIRE optional with defaults
 const requiredEnvVars = [
-  'JWT_SECRET',
-  'JWT_EXPIRE'
+  // We'll check these individually below
 ];
 
 // Check for missing required environment variables
@@ -14,6 +14,17 @@ const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
   throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
+}
+
+// Set default values for JWT if not provided
+if (!process.env.JWT_SECRET) {
+  console.warn('Warning: JWT_SECRET not defined in environment. Using default value for development only.');
+  process.env.JWT_SECRET = 'scholarbridge-development-secret-key';
+}
+
+if (!process.env.JWT_EXPIRE) {
+  console.warn('Warning: JWT_EXPIRE not defined in environment. Using default value of 30 days.');
+  process.env.JWT_EXPIRE = '30d';
 }
 
 // Export all environment variables in a structured way
@@ -26,11 +37,10 @@ module.exports = {
   db: {
     uri: process.env.MONGO_URI || 'mongodb://localhost:27017/scholarship_management'
   },
-  
-  // JWT configuration
+    // JWT configuration
   jwt: {
     secret: process.env.JWT_SECRET,
-    expire: process.env.JWT_EXPIRE || '30d',
+    expire: process.env.JWT_EXPIRE,
     refreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
     refreshExpire: process.env.JWT_REFRESH_EXPIRE || '7d'
   },
