@@ -25,6 +25,14 @@ router.post(
   authController.login
 );
 
+// Admin login
+router.post(
+  '/admin-login',
+  validate(schemas.auth.login),
+  checkAccountLocked,
+  authController.adminLogin
+);
+
 // Refresh access token
 router.post(
   '/refresh-token',
@@ -58,6 +66,12 @@ router.post(
 router.get(
   '/verify-email/:token',
   authController.verifyEmail
+);
+
+// Check if admin exists (for admin login)
+router.get(
+  '/check-admin',
+  authController.checkAdminExists
 );
 
 // Logout user

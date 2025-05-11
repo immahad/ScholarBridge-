@@ -14,8 +14,22 @@ const adminData = {
   role: 'admin', 
   phoneNumber: '03301234567',
   isActive: true,
-  isVerified: true
+  isVerified: true,
+  // Add admin specific fields
+  adminLevel: 'super_admin',
+  department: 'IT',
+  permissions: {
+    manageStudents: true,
+    manageDonors: true,
+    manageScholarships: true,
+    manageApplications: true,
+    generateReports: true,
+    manageAdmins: true
+  }
 };
+
+console.log('Starting admin seed process...');
+console.log('Connecting to MongoDB...');
 
 // Connect to the database
 mongoose.connect(config.db.uri, { 
@@ -38,30 +52,27 @@ mongoose.connect(config.db.uri, {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(adminData.password, salt);
     
+    console.log('Creating admin user...');
+    
     // Create admin user
-    const adminUser = await createUserWithProfile({
+    const adminUser = await Admin.create({
       ...adminData,
-      password: hashedPassword,
-      permissions: [
-        'manage_users', 
-        'manage_scholarships', 
-        'approve_applications', 
-        'manage_payments', 
-        'generate_reports'
-      ]
+      password: hashedPassword
     });
     
     console.log('Admin user created successfully');
     console.log(`Email: ${adminData.email}`);
-    console.log(`Password: ${adminData.password}`);
+    console.log(`Password: Admin@123 (not showing actual password for security)`);
     
     process.exit(0);
   } catch (error) {
-    console.error('Error creating admin user:', error);
+    console.error('Error creating admin user:', error.message);
+    console.error(error.stack);
     process.exit(1);
   }
 })
 .catch(err => {
-  console.error('MongoDB connection error:', err);
+  console.error('MongoDB connection error:', err.message);
+  console.error(err.stack);
   process.exit(1);
-}); 
+});

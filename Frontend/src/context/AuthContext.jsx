@@ -36,23 +36,46 @@ const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = async (credentials) => {
-    try {
-      setError(null);
-      const response = await authService.login(credentials);
-      const { token: apiToken, user: apiUser } = response.data;
-      
-      localStorage.setItem('token', apiToken);
-      localStorage.setItem('user', JSON.stringify(apiUser));
-      
-      setToken(apiToken);
-      setUser(apiUser);
-      return apiUser;
-    } catch (err) {
-      const message = err.response?.data?.message || 'Failed to login';
-      setError(message);
-      throw err;
+  try {
+    setError(null);
+    let response;
+
+    // Handle admin login
+    if (credentials.role === 'admin') {
+      const { email, password } = credentials;
+      console.log('Using admin login endpoint with email:', email);
+      response = await authService.adminLogin({ email, password });
+    } else {
+      // Regular login
+      console.log('Using regular login endpoint');
+      response = await authService.login(credentials);
     }
-  };
+
+    const { token: apiToken, user: apiUser } = response.data;
+
+    localStorage.setItem('token', apiToken);
+    localStorage.setItem('user', JSON.stringify(apiUser));
+
+    setToken(apiToken);
+    setUser(apiUser);
+    return apiUser;
+  } catch (err) {
+    console.error('Login error:', err);
+
+    if (err.response) {
+      console.error('Error response data:', err.response.data);
+      console.error('Error response status:', err.response.status);
+    } else if (err.request) {
+      console.error('Error request:', err.request);
+    } else {
+      console.error('Error message:', err.message);
+    }
+
+    const message = err.response?.data?.message || 'Failed to login';
+    setError(message);
+    throw err;
+  }
+};
 
   const register = async (userData) => {
     try {
@@ -93,4 +116,4 @@ const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export default AuthProvider; 
+export default AuthProvider;

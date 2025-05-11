@@ -9,6 +9,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,13 +20,21 @@ const Navbar = () => {
       }
     };
 
+    const handleClickOutside = (event) => {
+      if (dropdownOpen && !event.target.closest('.profile-dropdown')) {
+        setDropdownOpen(false);
+      }
+    };
+
     window.addEventListener('scroll', handleScroll);
+    document.addEventListener('mousedown', handleClickOutside);
     
-    // Clean up the event listener
+    // Clean up the event listeners
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [dropdownOpen]);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -73,25 +82,39 @@ const Navbar = () => {
             <Link to="/support" className="navbar-link" onClick={closeMenu}>
               <FiDollarSign className="navbar-icon" /> Support
             </Link>
-          </li>
-
-          {isAuthenticated ? (
+          </li>          {isAuthenticated ? (
             <>
               <li className="navbar-item profile-dropdown">
-                <button className="navbar-profile-btn">
+                <button 
+                  className="navbar-profile-btn" 
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  aria-expanded={dropdownOpen}
+                >
                   <div className="avatar">
                     {user?.firstName?.charAt(0) || 'U'}
                   </div>
                   <span>{user?.firstName} {user?.lastName}</span>
                 </button>
-                <ul className="profile-dropdown-menu">
+                <ul className={`profile-dropdown-menu ${dropdownOpen ? 'show' : ''}`}>
                   <li>
-                    <Link to={`/${user?.role}/dashboard`} onClick={closeMenu}>
+                    <Link 
+                      to={`/${user?.role}/dashboard`} 
+                      onClick={() => {
+                        closeMenu();
+                        setDropdownOpen(false);
+                      }}
+                    >
                       Dashboard
                     </Link>
                   </li>
                   <li>
-                    <Link to={`/${user?.role}/profile`} onClick={closeMenu}>
+                    <Link 
+                      to={`/${user?.role}/profile`} 
+                      onClick={() => {
+                        closeMenu();
+                        setDropdownOpen(false);
+                      }}
+                    >
                       My Profile
                     </Link>
                   </li>

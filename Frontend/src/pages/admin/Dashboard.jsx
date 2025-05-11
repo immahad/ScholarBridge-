@@ -248,7 +248,7 @@ const AdminDashboard = () => {
           
           {/* X-axis labels */}
           <div className="x-axis-labels">
-            {userGrowthData.months.map((month, index) => (
+            {userGrowthData.months.map((month) => (
               <div key={month} className="axis-label">
                 {month}
               </div>
@@ -477,15 +477,14 @@ const AdminDashboard = () => {
             <div className="section-header">
               <h2>Quick Actions</h2>
             </div>
-            
-            <div className="quick-actions">
-              <Link to="/admin/manage-users" className="quick-action-card">
+              <div className="quick-actions">
+              <Link to="/admin/users" className="quick-action-card">
                 <FiUsers className="action-icon" />
                 <h3>Manage Users</h3>
                 <p>Add, edit, or remove user accounts</p>
               </Link>
               
-              <Link to="/admin/manage-scholarships" className="quick-action-card">
+              <Link to="/admin/scholarships" className="quick-action-card">
                 <FiFileText className="action-icon" />
                 <h3>Manage Scholarships</h3>
                 <p>Review and process scholarship applications</p>
