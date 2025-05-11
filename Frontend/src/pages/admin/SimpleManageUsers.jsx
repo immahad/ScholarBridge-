@@ -1,3 +1,4 @@
+// filepath: d:\ScholarBridge-\Frontend\src\pages\admin\SimpleManageUsers.jsx
 import React, { useState, useEffect } from 'react';
 import { 
   FiUserCheck, 
@@ -53,7 +54,7 @@ const StudentStatusPill = ({ status }) => {
 
 const StatCard = ({ title, value, icon, color, textColor, bgColor, delay }) => (
   <div 
-    className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-4 flex items-center ${color} transform hover:scale-102 transition-transform stat-card card-hover-effect border-l-4`}
+    className={`bg-white rounded-xl shadow-md p-4 flex items-center ${color} stat-card border-l-4`}
     style={{ animationDelay: `${delay}s` }}
   >
     <div className={`rounded-full p-3 ${bgColor}`}>
@@ -83,13 +84,13 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, userName }) => {
         </p>
         <div className="flex justify-center gap-4">
           <button
-            className="px-6 py-2 bg-gray-200 text-gray-800 font-medium rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            className="px-6 py-2 bg-gray-200 text-gray-800 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
-            className="px-6 py-2 bg-rose-500 text-white font-medium rounded-md hover:bg-rose-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500"
+            className="px-6 py-2 bg-rose-500 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500"
             onClick={onConfirm}
           >
             Delete
@@ -145,27 +146,15 @@ const SimpleManageUsers = () => {
       .animate-slideInUp {
         animation: slideInUp 0.3s ease-out;
       }
-      .transform.hover\\:scale-102:hover {
-        transform: scale(1.02);
-      }
       .table-container {
         animation: fadeIn 0.5s ease-in-out;
       }
       .stat-card {
         animation: slideInUp 0.4s ease-out;
-        transition: all 0.3s ease;
-      }
-      .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
       }
       .delete-btn {
-        transition: all 0.2s;
+        transition: opacity 0.2s;
       }
-      .delete-btn:hover {
-        transform: scale(1.15);
-      }
-      
       /* Enhanced table styling */
       .enhanced-table th {
         font-weight: 600;
@@ -174,19 +163,6 @@ const SimpleManageUsers = () => {
         padding-top: 1rem;
         padding-bottom: 1rem;
         background-color: rgba(37, 99, 235, 0.05);
-      }
-      
-      .enhanced-table tr:hover td {
-        background-color: rgba(37, 99, 235, 0.03);
-      }
-      
-      /* Enhanced card styling */
-      .card-hover-effect {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-      }
-      .card-hover-effect:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
       }
       
       @media (max-width: 768px) {
@@ -216,6 +192,18 @@ const SimpleManageUsers = () => {
         .search-filter-container > div {
           width: 100% !important;
           margin-bottom: 0.5rem;
+        }
+        
+        /* Responsive pagination */
+        .pagination-container {
+          flex-direction: column;
+          align-items: flex-end;
+        }
+        
+        .pagination-container > div {
+          width: 100%;
+          margin-top: 0.5rem;
+          text-align: right;
         }
       }
     `;    
@@ -841,7 +829,7 @@ const SimpleManageUsers = () => {
             className={`px-6 py-3 font-semibold rounded-lg transition-all duration-300 relative ${
               activeTab === 'students'
                 ? 'text-white bg-blue-600 shadow-md'
-                : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'
+                : 'text-gray-600'
             }`}
             onClick={() => setActiveTab('students')}
           >
@@ -854,7 +842,7 @@ const SimpleManageUsers = () => {
             className={`px-6 py-3 font-semibold rounded-lg transition-all duration-300 relative ${
               activeTab === 'donors'
                 ? 'text-white bg-green-600 shadow-md'
-                : 'text-gray-600 hover:text-green-600 hover:bg-gray-100'
+                : 'text-gray-600'
             }`}
             onClick={() => setActiveTab('donors')}
           >
@@ -866,7 +854,7 @@ const SimpleManageUsers = () => {
         </div>
         
         {/* Search and Filter Section */}
-        <div className="bg-white p-6 rounded-xl shadow-md mb-6 transition-all duration-300 hover:shadow-lg animate-slideInUp card-hover-effect">
+        <div className="bg-white p-6 rounded-xl shadow-md mb-6 animate-slideInUp">
           <div className="flex flex-col md:flex-row gap-4 search-filter-container">
             <div className="flex-grow relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -913,7 +901,7 @@ const SimpleManageUsers = () => {
         ) : activeTab === 'students' ? (
           // Students Table
           filteredStudents.length === 0 ? (
-            <div className="bg-white p-8 rounded-xl text-center shadow-sm animate-fadeIn card-hover-effect">
+            <div className="bg-white p-8 rounded-xl text-center shadow-sm animate-fadeIn">
               <FiAlertTriangle className="mx-auto text-blue-500 mb-3" size={40} />
               <p className="text-gray-700 font-medium">No students found matching your criteria.</p>
               <p className="text-gray-500 mt-2">Try adjusting your search filters.</p>
@@ -922,13 +910,13 @@ const SimpleManageUsers = () => {
                   setSearchTerm('');
                   setApplicationStatusFilter('all');
                 }}
-                className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors duration-200"
+                className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 rounded-md transition-colors duration-200"
               >
                 Clear Filters
               </button>
             </div>
           ) : (
-            <div className="overflow-hidden bg-white rounded-xl shadow-md table-container card-hover-effect">
+            <div className="overflow-hidden bg-white rounded-xl shadow-md table-container">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 responsive-table enhanced-table">
                   <thead>
@@ -959,7 +947,7 @@ const SimpleManageUsers = () => {
                             {/* Delete button */}
                             <button
                               onClick={() => handleDeleteUser(student._id, `${student.firstName} ${student.lastName}`, 'student')}
-                              className="p-2 bg-red-100 text-red-600 rounded-full absolute right-6 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-200 delete-btn"
+                              className="p-2 bg-red-100 text-red-600 rounded-full absolute right-6 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 delete-btn"
                               aria-label="Delete user"
                             >
                               <FiTrash2 size={16} />
@@ -1005,7 +993,7 @@ const SimpleManageUsers = () => {
         ) : (
           // Donors Table
           filteredDonors.length === 0 ? (
-            <div className="bg-white p-8 rounded-xl text-center shadow-sm animate-fadeIn card-hover-effect">
+            <div className="bg-white p-8 rounded-xl text-center shadow-sm animate-fadeIn">
               <FiAlertTriangle className="mx-auto text-green-500 mb-3" size={40} />
               <p className="text-gray-700 font-medium">No donors found matching your criteria.</p>
               <p className="text-gray-500 mt-2">Try adjusting your search filters.</p>
@@ -1013,13 +1001,13 @@ const SimpleManageUsers = () => {
                 onClick={() => {
                   setSearchTerm('');
                 }}
-                className="mt-4 px-4 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors duration-200"
+                className="mt-4 px-4 py-2 bg-green-100 text-green-700 rounded-md transition-colors duration-200"
               >
                 Clear Filters
               </button>
             </div>
           ) : (
-            <div className="overflow-hidden bg-white rounded-xl shadow-md table-container card-hover-effect">
+            <div className="overflow-hidden bg-white rounded-xl shadow-md table-container">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 responsive-table enhanced-table">
                   <thead>
@@ -1051,7 +1039,7 @@ const SimpleManageUsers = () => {
                             {/* Delete button */}
                             <button
                               onClick={() => handleDeleteUser(donor._id, donor.organizationName || `${donor.firstName} ${donor.lastName}`, 'donor')}
-                              className="p-2 bg-red-100 text-red-600 rounded-full absolute right-6 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-200 delete-btn"
+                              className="p-2 bg-red-100 text-red-600 rounded-full absolute right-6 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 delete-btn"
                               aria-label="Delete donor"
                             >
                               <FiTrash2 size={16} />
@@ -1099,59 +1087,47 @@ const SimpleManageUsers = () => {
           )
         )}
         
-        {/* Pagination Controls */}
+        {/* Pagination Controls - moved to right, styled green and fixed size */}
         {(activeTab === 'students' && filteredStudents.length > 0) || 
          (activeTab === 'donors' && filteredDonors.length > 0) ? (
-          <div className="flex items-center justify-between mt-6 bg-white p-4 rounded-xl shadow-sm">
-            <div className="flex-1 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing{' '}
-                  <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
-                  <span className="font-medium">
-                    {Math.min(indexOfLastItem, (activeTab === 'students' ? filteredStudents.length : filteredDonors.length))}
-                  </span>{' '}
-                  of{' '}
-                  <span className="font-medium">
-                    {activeTab === 'students' ? filteredStudents.length : filteredDonors.length}
-                  </span>{' '}
-                  results
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <button 
+          <div className="mt-6">
+            <div className="w-full flex justify-end">
+              <div className="flex items-center bg-white p-4 rounded-xl shadow-sm">
+                <nav className="flex items-center space-x-2" aria-label="Pagination" style={{ marginLeft: '73vw' }}>
+                  {/* Previous */}
+                  <button
                     onClick={goToPreviousPage}
                     disabled={currentPage === 1}
-                    className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`}
+                    style={{backgroundColor: 'lightgreen'}}
+                    className={`inline-flex items-center justify-center h-10 w-10 rounded-md bg-green-500 text-white transition duration-200 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'}`}
                   >
-                    <span className="sr-only">Previous</span>
+                    <span className="sr-only">Prev</span>
                     <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </button>
-                  
+
                   {/* Page Numbers */}
                   {[...Array(totalPages).keys()].map(number => (
                     <button
                       key={number + 1}
                       onClick={() => paginate(number + 1)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                      className={`inline-flex items-center justify-center h-10 w-10 border text-sm font-medium rounded-md ${
                         currentPage === number + 1
-                          ? 'border-blue-500 bg-blue-50 text-blue-600 hover:bg-blue-100'
-                          : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                          ? 'bg-blue-50 border-blue-500 text-blue-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100'
                       }`}
                     >
                       {number + 1}
                     </button>
                   ))}
-                  
-                  <button 
+
+                  {/* Next */}
+                  <button
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
-                    className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                      currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'
-                    }`}
+                    style={{backgroundColor: 'lightgreen'}}
+                    className={`inline-flex items-center justify-center h-10 w-10 rounded-md bg-green-500 text-white transition duration-200 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'}`}
                   >
                     <span className="sr-only">Next</span>
                     <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -1160,6 +1136,9 @@ const SimpleManageUsers = () => {
                   </button>
                 </nav>
               </div>
+            </div>
+            <div className="mt-2 pr-4 text-right text-sm text-gray-700">
+              Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, (activeTab === 'students' ? filteredStudents.length : filteredDonors.length))}</span> of <span className="font-medium">{activeTab === 'students' ? filteredStudents.length : filteredDonors.length}</span> results
             </div>
           </div>
         ) : null}
