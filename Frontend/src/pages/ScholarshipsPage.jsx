@@ -1,97 +1,50 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiFilter, FiSearch, FiCalendar, FiDollarSign, FiBookOpen } from 'react-icons/fi';
-// Import will be used when API calls are uncommented
-// import { scholarshipService } from '../services/api';
+import axios from 'axios';
+import { useAuth } from '../context/AuthUtils';
 import '../styles/scholarships.css';
 
 const ScholarshipsPage = () => {
   const [scholarships, setScholarships] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Will be used when API calls are uncommented
-  const [error] = useState(null);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     category: '',
     minAmount: '',
     maxAmount: '',
   });
-  // Comment out the actual API call for now since we're using mock data
-  // useEffect(() => {
-  //   const fetchScholarships = async () => {
-  //     try {
-  //       setLoading(true);
-  //       const response = await scholarshipService.getAllScholarships();
-  //       setScholarships(response.data);
-  //     } catch (err) {
-  //       console.error('Failed to fetch scholarships:', err);
-  //       setError('Failed to load scholarships. Please try again later.');
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
+  const { token } = useAuth();
 
-  //   fetchScholarships();
-  // }, []);
-
-  // For demo purposes, we'll use mock data
   useEffect(() => {
-    const mockScholarships = [
-      {
-        id: 1,
-        title: "Merit Scholarship for Computer Science",
-        description: "Scholarship for outstanding CS students with demonstrated academic excellence.",
-        amount: 5000,
-        deadline: "2023-07-30",
-        category: "Computer Science",
-        organization: "Tech Foundation",
-        requirements: "GPA 3.5+, CS major",
-      },
-      {
-        id: 2,
-        title: "Engineering Excellence Award",
-        description: "Supporting the next generation of innovative engineers.",
-        amount: 3500,
-        deadline: "2023-08-15",
-        category: "Engineering",
-        organization: "Engineering Society",
-        requirements: "Engineering major, research project",
-      },
-      {
-        id: 3,
-        title: "Business Leadership Scholarship",
-        description: "For business students showing exceptional leadership potential.",
-        amount: 4000,
-        deadline: "2023-09-01",
-        category: "Business",
-        organization: "Business Leaders Association",
-        requirements: "Business major, leadership experience",
-      },
-      {
-        id: 4,
-        title: "Medical Studies Grant",
-        description: "Supporting students pursuing careers in healthcare and medicine.",
-        amount: 6000,
-        deadline: "2023-08-20",
-        category: "Medical",
-        organization: "Healthcare Foundation",
-        requirements: "Pre-med or medical studies, volunteer experience",
-      },
-      {
-        id: 5,
-        title: "Arts and Humanities Fellowship",
-        description: "Promoting excellence in arts and humanities disciplines.",
-        amount: 2500,
-        deadline: "2023-09-15",
-        category: "Arts",
-        organization: "Creative Arts Council",
-        requirements: "Arts or humanities major, portfolio",
-      },
-    ];
-    
-    setScholarships(mockScholarships);
-    setLoading(false);
-  }, []);
+    const fetchScholarships = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('/api/students/scholarships', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        console.log('Scholarships API response:', response.data);
+        
+        if (response.data.success) {
+          setScholarships(response.data.scholarships);
+        } else {
+          setError('Failed to load scholarships');
+        }
+      } catch (err) {
+        console.error('Failed to fetch scholarships:', err);
+        console.error('Error details:', err.response?.data);
+        setError(err.response?.data?.message || 'Failed to load scholarships. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) {
+      fetchScholarships();
+    }
+  }, [token]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -218,7 +171,7 @@ const ScholarshipsPage = () => {
           ) : (
             <div className="scholarships-grid">
               {filteredScholarships.map(scholarship => (
-                <div key={scholarship.id} className="scholarship-card">
+                <div key={scholarship._id} className="scholarship-card">
                   <h3 className="scholarship-title">{scholarship.title}</h3>
                   <p className="scholarship-description">{scholarship.description}</p>
                   
@@ -229,7 +182,7 @@ const ScholarshipsPage = () => {
                     </div>
                     <div className="detail-item">
                       <FiCalendar className="detail-icon" />
-                      <span>Deadline: {new Date(scholarship.deadline).toLocaleDateString()}</span>
+                      <span>Deadline: {new Date(scholarship.deadlineDate).toLocaleDateString()}</span>
                     </div>
                     <div className="detail-item">
                       <FiBookOpen className="detail-icon" />
@@ -238,7 +191,7 @@ const ScholarshipsPage = () => {
                   </div>
                   
                   <div className="scholarship-footer">
-                    <Link to={`/scholarships/${scholarship.id}`} className="btn btn-primary">
+                    <Link to={`/scholarships/${scholarship._id}`} className="btn btn-primary">
                       View Details
                     </Link>
                   </div>

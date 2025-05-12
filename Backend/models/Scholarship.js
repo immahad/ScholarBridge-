@@ -45,14 +45,93 @@ const scholarshipSchema = new mongoose.Schema({
     required: [true, 'Eligibility requirements are required'], 
     trim: true 
   },
+  // Advanced criteria fields
+  criteria: {
+    minGPA: { 
+      type: Number, 
+      default: 0,
+      min: 0,
+      max: 4
+    },
+    requiredDocuments: {
+      type: [String],
+      enum: ['transcript', 'recommendation', 'financial', 'id', 'essay', 'cv', 'resume'],
+      default: ['transcript']
+    },
+    eligibleInstitutions: {
+      type: [String],
+      default: []
+    },
+    eligiblePrograms: {
+      type: [String],
+      default: []
+    },
+    additionalCriteria: {
+      type: [String],
+      default: []
+    }
+  },
   createdBy: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User', 
     required: [true, 'Scholarship creator is required'] 
+  },
+  status: {
+    type: String,
+    enum: ['pending_approval', 'approved', 'rejected', 'active', 'closed', 'expired'],
+    default: 'pending_approval'
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin'
+  },
+  approvedAt: {
+    type: Date
+  },
+  rejectionReason: {
+    type: String,
+    trim: true
+  },
+  visible: {
+    type: Boolean,
+    default: false
+  },
+  applicantCount: {
+    type: Number,
+    default: 0
+  },
+  approvedCount: {
+    type: Number,
+    default: 0
+  },
+  approvedApplicantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student'
   }
 }, {
   timestamps: true
 });
+
+// Method to check if scholarship is active
+scholarshipSchema.methods.isActive = function() {
+  return this.status === 'active' && 
+         this.deadlineDate > new Date() && 
+         this.visible === true;
+};
+
+// Method to check if scholarship is expired
+scholarshipSchema.methods.isExpired = function() {
+  return this.deadlineDate <= new Date();
+};
+
+// Static method to find active scholarships
+scholarshipSchema.statics.findActiveScholarships = function() {
+  return this.find({
+    status: 'active',
+    deadlineDate: { $gt: new Date() },
+    visible: true
+  });
+};
 
 // Create Scholarship model
 const Scholarship = mongoose.model('Scholarship', scholarshipSchema);

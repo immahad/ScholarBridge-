@@ -47,11 +47,18 @@ module.exports = {
   
   // Email configuration
   email: {
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    user: process.env.EMAIL_USER,
-    password: process.env.EMAIL_PASSWORD,
-    from: process.env.EMAIL_FROM || 'noreply@scholarshipmanagementsystem.com'
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: process.env.EMAIL_PORT || 587,
+    user: process.env.EMAIL_USER || 'your-email@gmail.com',
+    password: process.env.EMAIL_PASSWORD || 'your-app-password',
+    from: process.env.EMAIL_FROM || 'noreply@scholarbridge.com'
+  },
+  
+  // Stripe payment configuration
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || 'sk_test_your_test_key',
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || 'pk_test_your_publishable_key',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_your_webhook_secret'
   },
   
   // Frontend URL for CORS and email links
@@ -63,5 +70,10 @@ module.exports = {
     host: process.env.CACHE_HOST,
     port: process.env.CACHE_PORT,
     password: process.env.CACHE_PASSWORD
+  },
+  
+  // Feature flags
+  features: {
+    achPayments: process.env.FEATURE_ACH_PAYMENTS === 'true' || false
   }
 }; 

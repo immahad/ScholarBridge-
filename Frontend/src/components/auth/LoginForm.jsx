@@ -34,75 +34,28 @@ const LoginForm = () => {
       email: '',
       password: '',
     },
-    validationSchema: loginSchema,    onSubmit: async (values) => {
+    validationSchema: loginSchema,
+    onSubmit: async (values) => {
       try {
         setLoading(true);
         setServerError('');
         
         console.log('Login submission - Mode:', isAdminLogin ? 'Admin Login' : 'Regular Login');
-        console.log('Login values:', values);
-        
-        // If admin login, verify if email exists as admin first
-        if (isAdminLogin) {
-          setCheckingAdmin(true);
-          try {
-            console.log('Checking if email exists as admin:', values.email);
-            const adminCheck = await authService.checkAdmin(values.email);
-            console.log('Admin check response:', adminCheck.data);
-            
-            if (!adminCheck.data.adminExists) {
-              console.log('Admin not found for email:', values.email);
-              setServerError('No admin account found with this email.');
-              setLoading(false);
-              return;
-            }
-            console.log('Admin found, proceeding with login');
-          } catch (error) {
-            console.error('Error checking admin:', error);
-            if (error.response) {
-              console.error('Error response:', error.response.data);
-            }
-          } finally {
-            setCheckingAdmin(false);
-          }
-        }
         
         // Add role field for admin logins
         const loginData = isAdminLogin 
           ? { ...values, role: 'admin' }
           : values;
         
-        console.log('Attempting login with data:', loginData);
-        const user = await login(loginData);
-        console.log('Login successful, user:', user);
+        const result = await login(loginData);
         
-        // Redirect based on user role
-        if (user.role === 'student') {
-          console.log('Redirecting to student dashboard');
-          navigate('/student/dashboard');
-        } else if (user.role === 'donor') {
-          console.log('Redirecting to donor dashboard');
-          navigate('/donor/dashboard');
-        } else if (user.role === 'admin') {
-          console.log('Redirecting to admin dashboard');
-          navigate('/admin/dashboard');
-        } else {
-          console.log('Redirecting to home');
-          navigate('/');
+        if (!result.success) {
+          setServerError(result.message);
         }
+        // Navigation is handled inside the login function
       } catch (error) {
         console.error('Login error:', error);
-        if (error.response) {
-          console.error('Error status:', error.response.status);
-          console.error('Error data:', error.response.data);
-          setServerError(error.response.data?.message || 'Login failed. Please check your credentials.');
-        } else if (error.request) {
-          console.error('Request error:', error.request);
-          setServerError('Network error. Please check your connection.');
-        } else {
-          console.error('Error message:', error.message);
-          setServerError(error.message || 'Login failed. Please check your credentials.');
-        }
+        setServerError('An unexpected error occurred. Please try again.');
       } finally {
         setLoading(false);
       }

@@ -221,21 +221,20 @@ const schemas = {
           'number.min': 'GPA cannot be negative',
           'number.max': 'GPA cannot exceed 4.0'
         }),
-        transcriptUrl: Joi.string().uri().required().messages({
-          'any.required': 'Transcript URL is required',
-          'string.uri': 'Transcript URL must be a valid URI'
+        transcriptUrl: Joi.string().required().messages({
+          'any.required': 'Transcript URL is required'
         })
       }).required(),
-      statement: Joi.string().min(100).max(2000).required().messages({
+      statement: Joi.string().min(10).max(2000).required().messages({
         'any.required': 'Personal statement is required',
-        'string.min': 'Personal statement must be at least 100 characters',
+        'string.min': 'Personal statement must be at least 10 characters',
         'string.max': 'Personal statement cannot exceed 2000 characters'
       }),
       documents: Joi.array().items(
         Joi.object({
           type: Joi.string().valid('transcript', 'recommendation', 'financial', 'other').required(),
-          url: Joi.string().uri().required().messages({
-            'string.uri': 'Document URL must be a valid URI'
+          url: Joi.string().required().messages({
+            'string.empty': 'Document URL must not be empty'
           }),
           name: Joi.string().required()
         })
@@ -459,6 +458,24 @@ const schemas = {
         'any.required': 'Phone number is required'
       }),
       isActive: Joi.boolean().default(true).optional()
+    }),
+
+    reviewApplication: Joi.object({
+      status: Joi.string().valid('approved', 'rejected').required().messages({
+        'any.required': 'Status is required',
+        'any.only': 'Status must be either approved or rejected'
+      }),
+      reason: Joi.string().when('status', {
+        is: 'rejected',
+        then: Joi.string().required().messages({
+          'any.required': 'Reason is required when rejecting an application'
+        }),
+        otherwise: Joi.string().allow('').optional()
+      })
+    }),
+
+    reviewScholarship: Joi.object({
+      // ... existing code ...
     })
   },
   

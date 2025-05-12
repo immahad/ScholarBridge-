@@ -1,6 +1,8 @@
 // backend/controllers/studentController.js
 const Student = require('../models/Student');
 const Scholarship = require('../models/Scholarship');
+const Admin = require('../models/Admin');
+const Donor = require('../models/Donor');
 const mongoose = require('mongoose');
 const { asyncHandler, createError } = require('../middleware/errorHandler');
 
@@ -244,8 +246,12 @@ exports.getAvailableScholarships = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
   
-  // Find active scholarships
-  const scholarships = await Scholarship.findActiveScholarships()
+  // Find active scholarships (only active and visible ones)
+  const scholarships = await Scholarship.find({
+    status: 'active',
+    deadlineDate: { $gt: new Date() },
+    visible: true
+  })
     .skip(skip)
     .limit(limit);
   
@@ -326,29 +332,25 @@ exports.applyForScholarship = asyncHandler(async (req, res) => {
   const scholarshipId = req.params.id;
   
   // Get essays from request body
-  const { essays } = req.body;
-  
-  // Start session for transaction
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const { academicInfo, statement, documents } = req.body;
   
   try {
     // Find student
-    const student = await Student.findById(studentId).session(session);
+    const student = await Student.findById(studentId);
     
     if (!student) {
       throw createError('Student profile not found', 404);
     }
     
     // Find scholarship
-    const scholarship = await Scholarship.findById(scholarshipId).session(session);
+    const scholarship = await Scholarship.findById(scholarshipId);
     
     if (!scholarship) {
       throw createError('Scholarship not found', 404);
     }
     
     // Check if scholarship is active and not expired
-    if (!scholarship.isActive()) {
+    if (scholarship.status !== 'active' || (scholarship.deadlineDate && new Date(scholarship.deadlineDate) < new Date())) {
       throw createError('Scholarship is not active or has expired', 400);
     }
     
@@ -361,33 +363,29 @@ exports.applyForScholarship = asyncHandler(async (req, res) => {
       throw createError('You have already applied for this scholarship', 400);
     }
     
-    // Check eligibility
-    const eligibility = student.canApplyForScholarship(scholarship);
-    
-    if (!eligibility.canApply) {
-      throw createError(`You are not eligible for this scholarship: ${eligibility.reason}`, 400);
-    }
-    
     // Create application
     const application = {
       scholarshipId,
       status: 'pending',
       appliedAt: new Date(),
-      essays: essays || []
+      essays: [{
+        question: 'Personal Statement',
+        answer: statement
+      }],
+      documents: documents || []
     };
     
     // Add application to student
     student.scholarshipApplications.push(application);
     
-    // Update scholarship application count
-    scholarship.applicantCount += 1;
+    // Save student with new application
+    await student.save();
     
-    // Save changes
-    await student.save({ session });
-    await scholarship.save({ session });
-    
-    // Commit transaction
-    await session.commitTransaction();
+    // Update scholarship application count separately
+    await Scholarship.findByIdAndUpdate(
+      scholarshipId,
+      { $inc: { applicantCount: 1 } }
+    );
     
     res.status(201).json({
       success: true,
@@ -395,12 +393,11 @@ exports.applyForScholarship = asyncHandler(async (req, res) => {
       application: student.scholarshipApplications[student.scholarshipApplications.length - 1]
     });
   } catch (error) {
-    // Abort transaction on error
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    // End session
-    session.endSession();
+    console.error('Application submission error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message || 'Failed to submit application'
+    });
   }
 });
 
@@ -488,7 +485,7 @@ exports.getApplicationDetails = asyncHandler(async (req, res) => {
   let donor = null;
   
   if (application.fundedBy) {
-    donor = await mongoose.model('Donor').findById(application.fundedBy)
+    donor = await Donor.findById(application.fundedBy)
       .select('firstName lastName organizationName donorType');
   }
   
@@ -496,7 +493,7 @@ exports.getApplicationDetails = asyncHandler(async (req, res) => {
   let admin = null;
   
   if (application.reviewedBy) {
-    admin = await mongoose.model('Admin').findById(application.reviewedBy)
+    admin = await Admin.findById(application.reviewedBy)
       .select('firstName lastName');
   }
   

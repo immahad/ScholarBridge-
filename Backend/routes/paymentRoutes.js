@@ -6,24 +6,24 @@ const { isDonor, isAdmin } = require('../middleware/roleCheck');
 const { validate, schemas } = require('../middleware/validation');
 
 // Public routes
-router.get('/options', paymentController.getPaymentOptions);
+// Stripe webhook endpoint
+router.post('/webhook', express.raw({ type: 'application/json' }), paymentController.handleStripeWebhook);
 
-// Protected routes - require authentication
-router.use(verifyToken);
+// Protected routes
+// Get payment options
+router.get('/options', verifyToken, paymentController.getPaymentOptions);
 
-// Donor routes - make donation
-router.post(
-  '/donate',
-  isDonor,
-  validate(schemas.payment.makeDonation),
-  paymentController.makeDonation
-);
+// Create payment intent (for Stripe)
+router.post('/create-payment-intent', verifyToken, isDonor, paymentController.createPaymentIntent);
+
+// Make a donation to a scholarship
+router.post('/make-donation', verifyToken, isDonor, paymentController.makeDonation);
 
 // Get donor's payment history
-router.get('/history', isDonor, paymentController.getDonorPaymentHistory);
+router.get('/history', verifyToken, isDonor, paymentController.getDonorPaymentHistory);
 
-// Get payment details
-router.get('/:id', paymentController.getPaymentDetails);
+// Check payment status 
+router.get('/status/:transactionId', verifyToken, paymentController.checkPaymentStatus);
 
 // Admin routes - need admin role
 router.use(isAdmin);

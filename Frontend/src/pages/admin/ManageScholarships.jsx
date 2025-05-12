@@ -268,7 +268,7 @@ const AdminManageScholarships = () => {
                   </td>
                   <td className="py-3 px-6 text-center">
                     <div className="flex item-center justify-center gap-3">
-                      <Link to={`/scholarships/${scholarship._id}`} className="text-blue-500 hover:text-blue-700">
+                      <Link to={`/admin/scholarships/view/${scholarship._id}`} className="text-blue-500 hover:text-blue-700">
                         <FiEye size={18} title="View" />
                       </Link>
                       <Link to={`/admin/scholarships/edit/${scholarship._id}`} className="text-yellow-500 hover:text-yellow-700">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FiDollarSign, FiUsers, FiBarChart2, FiFileText, FiCheckCircle, FiArrowRight, FiFilePlus, FiPlusCircle } from 'react-icons/fi';
+import { FiDollarSign, FiUsers, FiBarChart2, FiFileText, FiCheckCircle, FiArrowRight, FiFilePlus, FiPlusCircle, FiClock, FiXCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthUtils';
 import axios from 'axios';
 import jsPDF from 'jspdf';
@@ -16,6 +16,11 @@ const DonorDashboard = () => {
     eligibleStudentsCount: 0,
   });
   const [donations, setDonations] = useState([]);
+  const [scholarships, setScholarships] = useState({
+    pending: [],
+    active: [],
+    rejected: []
+  });
   const [chartData, setChartData] = useState({
     months: [],
     values: []
@@ -81,8 +86,25 @@ const DonorDashboard = () => {
       }
     };
 
+    const fetchDonorScholarships = async () => {
+      try {
+        const response = await axios.get('/api/scholarships/donor', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data.success) {
+          setScholarships(response.data.scholarships);
+        } else {
+          console.error('Failed to fetch donor scholarships:', response.data.message);
+        }
+      } catch (error) {
+        console.error('Error fetching donor scholarships:', error.response ? error.response.data : error.message);
+      }
+    };
+
     if (token) {
       fetchDonorDashboardData();
+      fetchDonorScholarships();
     } else {
       setLoading(false);
     }
@@ -190,6 +212,33 @@ const DonorDashboard = () => {
     }).format(amount);
   };
 
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'pending_approval': return 'status-pending';
+      case 'active': return 'status-approved';
+      case 'rejected': return 'status-rejected';
+      default: return '';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending_approval': return <FiClock className="status-icon pending" />;
+      case 'active': return <FiCheckCircle className="status-icon approved" />;
+      case 'rejected': return <FiXCircle className="status-icon rejected" />;
+      default: return null;
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'pending_approval': return 'Pending Approval';
+      case 'active': return 'Active';
+      case 'rejected': return 'Rejected';
+      default: return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
   const generateChart = () => {
     const maxValue = Math.max(...chartData.values);
     const barWidth = 100 / chartData.months.length;
@@ -235,6 +284,13 @@ const DonorDashboard = () => {
     );
   };
 
+  // Get all scholarships combined for display
+  const allScholarships = [
+    ...scholarships.active.map(s => ({ ...s, statusLabel: 'Active' })),
+    ...scholarships.pending.map(s => ({ ...s, statusLabel: 'Pending Approval' })),
+    ...scholarships.rejected.map(s => ({ ...s, statusLabel: 'Rejected' }))
+  ];
+
   return (
     <div className="dashboard-container">
       <h1 className="dashboard-title">Donor Dashboard</h1>
@@ -276,6 +332,67 @@ const DonorDashboard = () => {
             </div>
           </div>
 
+          {/* My Scholarships Section */}
+          <div className="dashboard-section">
+            <div className="section-header">
+              <h2>My Scholarships</h2>
+              <Link to="/donor/scholarships/create" className="btn btn-primary">
+                <FiPlusCircle className="btn-icon" /> Create New Scholarship
+              </Link>
+            </div>
+            
+            <div className="scholarships-list">
+              {allScholarships.length === 0 ? (
+                <div className="empty-state">
+                  <p>You haven't created any scholarships yet.</p>
+                  <Link to="/donor/scholarships/create" className="btn btn-secondary">Create Your First Scholarship</Link>
+                </div>
+              ) : (
+                <div className="scholarship-cards">
+                  {allScholarships.slice(0, 4).map(scholarship => (
+                    <div key={scholarship._id} className="application-card">
+                      <div className="application-header">
+                        <h3>{scholarship.title}</h3>
+                        <div className={`status-badge ${getStatusClass(scholarship.status)}`}>
+                          {getStatusIcon(scholarship.status)}
+                          <span>{getStatusLabel(scholarship.status)}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="application-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Amount:</span>
+                          <span className="detail-value">${scholarship.amount.toLocaleString()}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Deadline:</span>
+                          <span className="detail-value">{formatDate(scholarship.deadlineDate)}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Applicants:</span>
+                          <span className="detail-value">{scholarship.applicantCount || 0}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="application-actions">
+                        <Link to={`/donor/scholarships/${scholarship._id}`} className="btn btn-outline">
+                          View Details
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {allScholarships.length > 4 && (
+                <div className="view-all-link">
+                  <Link to="/donor/scholarships" className="btn btn-link">
+                    View All Scholarships <FiArrowRight className="icon-right" />
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="dashboard-section">
             <div className="section-header">
               <h2>Donation Analytics</h2>
@@ -293,9 +410,6 @@ const DonorDashboard = () => {
               <h2>Recent Donations</h2>
               <Link to="/donor/students" className="btn btn-primary">
                 <FiFilePlus className="btn-icon" /> Donate to More Students
-              </Link>
-              <Link to="/donor/scholarships/create" className="btn btn-secondary" style={{ marginLeft: '1rem' }}>
-                <FiPlusCircle className="btn-icon" /> Create Scholarship
               </Link>
             </div>
             

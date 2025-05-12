@@ -273,4 +273,40 @@
   .dashboard-actions-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Empty state styling */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.empty-icon {
+  margin-bottom: 0.75rem;
+  color: #9ca3af;
+}
+
+.empty-state p {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.empty-description {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+.empty-state .action-link {
+  margin-top: 0.75rem;
+  color: #3b82f6;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.empty-state .action-link:hover {
+  text-decoration: underline;
 } 
