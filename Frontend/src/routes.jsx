@@ -6,6 +6,9 @@ import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
+import VerifyEmail from './components/auth/VerifyEmail';
+import ResendVerification from './components/auth/ResendVerification';
+import VerificationStatusPage from './pages/VerificationStatusPage';
 
 // Home/public pages
 import HomePage from './pages/HomePage';
@@ -72,13 +75,15 @@ const router = createBrowserRouter([
       { path: 'resources', element: <ResourcesPage /> },
       { path: 'faqs', element: <FAQsPage /> },
       { path: 'privacy', element: <PrivacyPolicyPage /> },
-      { path: 'terms', element: <TermsOfServicePage /> },
-      
-      // Auth routes
+      { path: 'terms', element: <TermsOfServicePage /> },      // Auth routes
       { path: 'login', element: <LoginForm /> },
       { path: 'register', element: <RegisterForm /> },
       { path: 'forgot-password', element: <ForgotPassword /> },
       { path: 'reset-password/:token', element: <ResetPassword /> },
+      { path: 'verify-email/:role/:token', element: <VerifyEmail /> },
+      { path: 'verification-success', element: <VerificationStatusPage status="success" /> },
+      { path: 'verification-failed', element: <VerificationStatusPage status="failed" /> },
+      { path: 'resend-verification', element: <ResendVerification /> },
       
       // Student routes
       { path: 'student/dashboard', element: <StudentDashboard /> },

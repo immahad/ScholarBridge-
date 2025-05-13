@@ -1,24 +1,25 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthUtils';
 import { FaEye, FaEyeSlash, FaUserShield } from 'react-icons/fa';
-import { authService } from '../../services/api';
 import '../../styles/auth.css';
 
 const LoginForm = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [checkingAdmin, setCheckingAdmin] = useState(false);
+  const [checkingAdmin] = useState(false);
   const [serverError, setServerError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isAdminLogin, setIsAdminLogin] = useState(false);
+  const [showVerificationMsg, setShowVerificationMsg] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
   
-  // Check for messages coming from other pages (e.g., after registration)
-  const message = location.state?.message || '';
+  // Check for verification success message from URL params
+  const queryParams = new URLSearchParams(location.search);
+  const verificationSuccess = queryParams.get('verified') === 'true';
 
   // Form validation schema
   const loginSchema = Yup.object().shape({
@@ -27,30 +28,45 @@ const LoginForm = () => {
       .required('Email is required'),
     password: Yup.string()
       .required('Password is required'),
+    role: Yup.string()
+      .oneOf(['student', 'donor', 'admin'], 'Invalid role')
+      .required('Please select a role')
   });
 
   const formik = useFormik({
     initialValues: {
       email: '',
       password: '',
+      role: 'student' // Default role selection
     },
     validationSchema: loginSchema,
     onSubmit: async (values) => {
       try {
         setLoading(true);
         setServerError('');
+        setShowVerificationMsg(false);
+        setUserEmail(values.email);
         
-        console.log('Login submission - Mode:', isAdminLogin ? 'Admin Login' : 'Regular Login');
+        console.log('Login submission - Role:', values.role);
         
-        // Add role field for admin logins
+        // Make sure role is explicitly set in the login data
         const loginData = isAdminLogin 
-          ? { ...values, role: 'admin' }
-          : values;
+          ? { email: values.email, password: values.password } 
+          : { email: values.email, password: values.password };
         
-        const result = await login(loginData);
+        // Use the role as a URL parameter to work around body parsing issues
+        const selectedRole = isAdminLogin ? 'admin' : values.role;
+        console.log(`Sending login data with role=${selectedRole}:`, loginData);
+        
+        const result = await login(loginData, selectedRole);
         
         if (!result.success) {
           setServerError(result.message);
+          
+          // Check if this is a verification issue
+          if (result.message && result.message.toLowerCase().includes('verify')) {
+            setShowVerificationMsg(true);
+          }
         }
         // Navigation is handled inside the login function
       } catch (error) {
@@ -69,12 +85,16 @@ const LoginForm = () => {
   const toggleAdminLogin = () => {
     setIsAdminLogin(!isAdminLogin);
     setServerError('');
+    setShowVerificationMsg(false);
+    // Reset role selection when toggling admin login
+    formik.setFieldValue('role', isAdminLogin ? 'student' : 'admin');
   };
 
   // Clear server error when switching login modes or changing form values
   useEffect(() => {
     setServerError('');
-  }, [isAdminLogin, formik.values.email, formik.values.password]);
+    setShowVerificationMsg(false);
+  }, [isAdminLogin, formik.values.email, formik.values.password, formik.values.role]);
 
   return (
     <div className="auth-form-container">
@@ -83,7 +103,31 @@ const LoginForm = () => {
           {isAdminLogin ? 'Admin Login' : 'Login to Your Account'}
         </h2>
         
-        {message && <div className="success-message">{message}</div>}
+        {verificationSuccess && (
+          <div className="success-message">
+            <div className="alert alert-success">
+              Email verified successfully! You can now log in to your account.
+            </div>
+          </div>
+        )}
+        
+        {location.state?.message && (
+          <div className="success-message">
+            <div className="alert alert-success">
+              {location.state.message}
+            </div>
+          </div>
+        )}
+        
+        {showVerificationMsg && (
+          <div className="verify-message alert alert-warning">
+            <p>Your email is not verified. Please check your inbox for a verification email or request a new one.</p>
+            <Link to={`/resend-verification?email=${encodeURIComponent(userEmail)}&role=${encodeURIComponent(formik.values.role)}`} className="btn btn-sm btn-primary mt-2">
+              Resend Verification Email
+            </Link>
+          </div>
+        )}
+        
         {serverError && <div className="error-message">{serverError}</div>}
         
         <form onSubmit={formik.handleSubmit} className="auth-form">
@@ -129,6 +173,26 @@ const LoginForm = () => {
             )}
           </div>
 
+          {!isAdminLogin && (
+            <div className="form-group">
+              <label htmlFor="role">Login As</label>
+              <select
+                id="role"
+                name="role"
+                className="form-control"
+                value={formik.values.role}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              >
+                <option value="student">Student</option>
+                <option value="donor">Donor</option>
+              </select>
+              {formik.touched.role && formik.errors.role && (
+                <div className="error-text">{formik.errors.role}</div>
+              )}
+            </div>
+          )}
+
           <div className="form-group text-right">
             <Link to="/forgot-password" className="forgot-password-link">
               Forgot Password?
@@ -161,10 +225,16 @@ const LoginForm = () => {
             </button>
           </div>
         </form>
-        
-        {!isAdminLogin && (
+          {!isAdminLogin && (
           <div className="auth-footer">
             Don't have an account? <Link to="/register">Register</Link>
+            {serverError && serverError.includes('verify') && (
+              <div className="verify-link">
+                <Link to={`/resend-verification?email=${encodeURIComponent(formik.values.email)}&role=${encodeURIComponent(formik.values.role)}`}>
+                  Resend verification email
+                </Link>
+              </div>
+            )}
           </div>
         )}
         

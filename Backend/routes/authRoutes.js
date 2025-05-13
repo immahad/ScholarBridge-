@@ -62,10 +62,23 @@ router.post(
   authController.resetPassword
 );
 
+// Verify email (direct method with query parameters)
+router.get(
+  '/direct-verify',
+  authController.directVerify
+);
+
 // Verify email
 router.get(
-  '/verify-email/:token',
+  '/verify-email/:role/:token',
   authController.verifyEmail
+);
+
+// Resend verification email
+router.post(
+  '/resend-verification',
+  validate(schemas.auth.forgotPassword),
+  authController.resendVerification
 );
 
 // Check if admin exists (for admin login)
@@ -93,6 +106,12 @@ router.get(
   '/validate-token',
   verifyToken,
   authController.validateToken
+);
+
+// One-step verification with redirect
+router.get(
+  '/verify',
+  authController.verifyAndRedirect
 );
 
 module.exports = router;

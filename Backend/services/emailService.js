@@ -13,6 +13,18 @@ const createTransporter = () => {
     return null;
   }
   
+  console.log('Creating email transporter with config:', {
+    host: config.email.host,
+    port: config.email.port,
+    secure: config.email.port === 465,
+    auth: {
+      user: config.email.user,
+      // Redact password for security
+      password: config.email.password ? '***PASSWORD_REDACTED***' : 'undefined'
+    },
+    from: config.email.from
+  });
+  
   return nodemailer.createTransport({
     host: config.email.host,
     port: config.email.port,
@@ -31,11 +43,16 @@ const createTransporter = () => {
  */
 const sendEmail = async (options) => {
   try {
+    console.log('Attempting to send email:', {
+      to: options.to,
+      subject: options.subject
+    });
+    
     const transporter = createTransporter();
     
     // If transporter is not configured, log and return false
     if (!transporter) {
-      console.log('Email not sent:', options.subject);
+      console.log('Email not sent (transporter not configured):', options.subject);
       return false;
     }
     
@@ -50,10 +67,71 @@ const sendEmail = async (options) => {
       html: options.html
     });
     
-    console.log('Email sent:', info.messageId);
+    console.log('Email sent successfully:', {
+      messageId: info.messageId,
+      to: options.to,
+      subject: options.subject
+    });
     return true;
   } catch (error) {
-    console.error('Email sending error:', error);
+    console.error('Email sending error:', error.message);
+    console.error('Error details:', error);
+    return false;
+  }
+};
+
+/**
+ * Send verification email to new user
+ * @param {Object} user - User data with verificationToken
+ * @returns {Promise<Boolean>} - Success status
+ */
+exports.sendVerificationEmail = async (user) => {
+  try {
+    console.log('======= SENDING VERIFICATION EMAIL =======');
+    console.log('To user:', user.email);
+    console.log('With verification token:', user.verificationToken);
+    console.log('Using frontend URL:', config.frontendUrl);
+    console.log('Using backend URL:', config.backendUrl);
+    
+    const { email, firstName, verificationToken, role } = user;
+    
+    // Create only the direct verification link that will redirect to success page
+    const directVerificationUrl = `${config.backendUrl}/api/auth/verify?token=${verificationToken}&role=${role}&email=${encodeURIComponent(email)}`;
+    
+    console.log('Direct verification URL:', directVerificationUrl);
+    
+    const emailContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #4a5568; text-align: center;">Verify Your Email Address</h2>
+        <p>Hello ${firstName},</p>
+        <p>Thank you for registering with ScholarBridge. To complete your registration, please verify your email address by clicking the button below:</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${directVerificationUrl}" style="background-color: #3182ce; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email</a>
+        </div>
+        
+        <p>If the button above doesn't work, you can also click on this link:</p>
+        <p><a href="${directVerificationUrl}">${directVerificationUrl}</a></p>
+        
+        <p>This link will expire in 24 hours. If you did not create an account, please ignore this email.</p>
+        
+        <p>Thank you,</p>
+        <p>The ScholarBridge Team</p>
+      </div>
+    `;
+    
+    const result = await sendEmail({
+      to: email,
+      subject: 'Verify Your Email Address - ScholarBridge',
+      html: emailContent
+    });
+    
+    console.log('Verification email send result:', result);
+    console.log('======= END VERIFICATION EMAIL =======');
+    
+    return result;
+  } catch (error) {
+    console.error('Error in sendVerificationEmail:', error);
     return false;
   }
 };
@@ -413,5 +491,36 @@ exports.sendScholarshipRejectedEmail = async (email, scholarshipTitle, reason) =
     subject,
     text,
     html
+  });
+};
+
+/**
+ * Send registration success email (alternative to verification)
+ * @param {Object} user - User object
+ */
+exports.sendRegistrationSuccessEmail = async (user) => {
+  const { email, firstName, role } = user;
+  
+  const emailContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+      <h2 style="color: #4a5568; text-align: center;">Registration Successful</h2>
+      <p>Hello ${firstName},</p>
+      <p>Thank you for registering with ScholarBridge. Your account has been created successfully as a <strong>${role}</strong>.</p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${config.frontendUrl}/login" style="background-color: #3182ce; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login Now</a>
+      </div>
+      
+      <p>You can now log in to your account and start using our platform.</p>
+      
+      <p>Thank you,</p>
+      <p>The ScholarBridge Team</p>
+    </div>
+  `;
+  
+  await sendEmail({
+    email,
+    subject: 'Registration Successful - ScholarBridge',
+    html: emailContent
   });
 };
