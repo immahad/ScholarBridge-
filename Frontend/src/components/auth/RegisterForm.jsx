@@ -116,7 +116,10 @@ const RegisterForm = () => {
         setServerError('');
         
         // Create a copy of values and remove irrelevant fields based on role
-        const submissionValues = { ...values };
+        const submissionValues = { 
+          ...values,
+          skipVerification: true // Skip email verification and send success email instead
+        };
         
         // If student, remove donor fields
         if (values.role === 'student') {
@@ -139,13 +142,25 @@ const RegisterForm = () => {
             delete submissionValues.organizationName;
           }
         }
-        
-        console.log('Submitting registration with values:', submissionValues);
-        await register(submissionValues);
-        navigate('/login', { state: { message: 'Registration successful! Please check your email to verify your account.' } });
+          console.log('Submitting registration with values:', submissionValues);
+        try {
+          const result = await register(submissionValues);
+          if (result.success) {
+            navigate('/login', { 
+              state: { 
+                message: 'Registration successful! You can now log in to your account.' 
+              } 
+            });
+          } else {
+            setServerError(result.message || 'Registration failed. Please try again.');
+          }
+        } catch (error) {
+          console.error('Registration error:', error);
+          setServerError(error.response?.data?.message || 'Registration failed. Please try again later.');
+        }
       } catch (error) {
-        console.error('Registration error:', error);
-        setServerError(error.response?.data?.message || 'Registration failed. Please try again later.');
+        console.error('Registration form error:', error);
+        setServerError(error.message || 'An unexpected error occurred. Please try again later.');
       } finally {
         setLoading(false);
       }

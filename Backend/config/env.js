@@ -44,8 +44,7 @@ module.exports = {
     refreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
     refreshExpire: process.env.JWT_REFRESH_EXPIRE || '7d'
   },
-  
-  // Email configuration
+    // Email configuration
   email: {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: process.env.EMAIL_PORT || 587,
@@ -75,5 +74,8 @@ module.exports = {
   // Feature flags
   features: {
     achPayments: process.env.FEATURE_ACH_PAYMENTS === 'true' || false
-  }
+  },
+  
+  // Backend URL for one-step verification (explicitly set port to 5000 for local development)
+  backendUrl: process.env.BACKEND_URL || 'http://localhost:5000'
 }; 

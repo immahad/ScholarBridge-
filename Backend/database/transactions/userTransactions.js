@@ -11,7 +11,11 @@ const Admin = require('../../models/Admin');
  * @param {Object} profileData - Role-specific profile data
  * @returns {Object} - Created user
  */
-exports.createUserWithProfile = async (userData, profileData = {}) => {
+const createUserWithProfile = async (userData, profileData = {}) => {
+  console.log('Starting createUserWithProfile transaction...');
+  console.log('User data:', JSON.stringify({ ...userData, password: '[REDACTED]' }, null, 2));
+  console.log('Profile data:', JSON.stringify(profileData, null, 2));
+  
   // Start a session for the transaction
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -39,9 +43,11 @@ exports.createUserWithProfile = async (userData, profileData = {}) => {
     
     // Create user with profile data
     const mergedData = { ...userData, ...profileData };
+    console.log('Creating user with merged data:', JSON.stringify({ ...mergedData, password: '[REDACTED]' }, null, 2));
     
     // Create user within the transaction
     const [user] = await UserModel.create([mergedData], { session });
+    console.log('User created successfully with ID:', user._id);
     
     // If user is an admin, create initial admin log
     if (role === 'admin') {
@@ -72,7 +78,7 @@ exports.createUserWithProfile = async (userData, profileData = {}) => {
  * @param {Object} profileData - Role-specific profile data to update
  * @returns {Object} - Updated user
  */
-exports.updateUserWithProfile = async (userId, userData, profileData = {}) => {
+const updateUserWithProfile = async (userId, userData, profileData = {}) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   
@@ -505,6 +511,8 @@ async function applyForScholarship(scholarshipId, studentId, studentUserId) {
   }
   
   module.exports = {
+    createUserWithProfile,
+    updateUserWithProfile,
     applyForScholarship,
     updateScholarshipApplication,
     createScholarship,

@@ -13,7 +13,6 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: [true, 'Please provide an email'],
-    unique: true,
     match: [
       /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/,
       'Please provide a valid email'
@@ -76,7 +75,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Create indexes for frequently queried fields
-userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ email: 1, role: 1 }, { unique: true });
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1, role: 1 });
 userSchema.index({ createdAt: -1 }); // For sorting by newest users
@@ -84,6 +83,14 @@ userSchema.index({ createdAt: -1 }); // For sorting by newest users
 // Virtual field for full name
 userSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;
+});
+
+// Keep the verification token trimmed to avoid whitespace issues
+userSchema.path('verificationToken').set(function(value) {
+  if (value && typeof value === 'string') {
+    return value.trim();
+  }
+  return value;
 });
 
 // Pre-save hook to hash password
@@ -101,6 +108,27 @@ userSchema.pre('save', async function(next) {
   } catch (error) {
     next(error);
   }
+});
+
+// Pre-save hook to log verification status changes
+userSchema.pre('save', function(next) {
+  // Check if isVerified field is being modified
+  if (this.isModified('isVerified')) {
+    console.log(`User ${this.email} verification status changed to: ${this.isVerified}`);
+    console.log('Full user data:', JSON.stringify(this.toObject(), null, 2));
+  }
+  
+  // Check if verificationToken field is being modified
+  if (this.isModified('verificationToken')) {
+    console.log(`User ${this.email} verificationToken changed to: ${this.verificationToken}`);
+  }
+  
+  next();
+});
+
+// Post-save hook to ensure verification status is properly saved
+userSchema.post('save', function(doc) {
+  console.log(`User ${doc.email} saved with isVerified: ${doc.isVerified}`);
 });
 
 // Method to compare password

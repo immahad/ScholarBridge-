@@ -1,6 +1,18 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+// Determine API URL based on environment
+const getApiUrl = () => {
+  // In production, use the same origin (for SPA backends)
+  if (window.location.hostname !== 'localhost') {
+    return '/api';
+  }
+  
+  // Different port for local development
+  return 'http://localhost:5000/api';
+};
+
+const API_URL = getApiUrl();
+console.log('Using API URL:', API_URL);
 
 // Create axios instance
 const api = axios.create({
@@ -56,7 +68,8 @@ const authService = {
   refreshToken: (refreshToken) => api.post('/auth/refresh-token', { refreshToken }),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token, password) => api.post(`/auth/reset-password/${token}`, { password }),
-  verifyEmail: (token) => api.get(`/auth/verify-email/${token}`),
+  verifyEmail: (role, token) => api.get(`/auth/verify-email/${role}/${token}`),
+  directVerify: (role, token) => api.get('/auth/direct-verify', { params: { role, token } }),
 };
 
 // Student services

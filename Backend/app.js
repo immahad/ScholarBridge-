@@ -27,7 +27,7 @@ app.use(helmet());
 
 // Enable CORS
 app.use(cors({
-  origin: isProduction ? process.env.CLIENT_URL : '*',
+  origin: '*', // Allow all origins for testing
   credentials: true
 }));
 
@@ -114,6 +114,30 @@ app.get('/api/debug/routes', (req, res) => {
     count: routes.length,
     routes
   });
+});
+
+// Special handling for verification URLs
+app.get('/verify-email/:role/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/dist/index.html'));
+});
+
+app.get('/verification-success', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/dist/index.html'));
+});
+
+app.get('/verification-failed', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/dist/index.html'));
+});
+
+// Serve React frontend for all unknown (non-API) routes (SPA fallback)
+app.use(express.static(path.join(__dirname, '../Frontend/dist')));
+app.get('*', (req, res) => {
+  // Only serve index.html for non-API routes
+  if (!req.path.startsWith('/api/')) {
+    res.sendFile(path.join(__dirname, '../Frontend/dist/index.html'));
+  } else {
+    res.status(404).json({ success: false, message: 'Resource not found' });
+  }
 });
 
 // Error handling middleware

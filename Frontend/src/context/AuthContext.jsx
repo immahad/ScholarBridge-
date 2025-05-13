@@ -40,20 +40,30 @@ export const AuthProvider = ({ children }) => {
 
     checkAuth();
   }, [token]);
-
   // Login function
-  const login = async (credentials) => {
+  const login = async (credentials, roleParam) => {
     try {
       // Determine if it's an admin login
-      const isAdminLogin = credentials.role === 'admin';
-      const endpoint = isAdminLogin ? '/api/auth/admin-login' : '/api/auth/login';
+      const isAdminLogin = roleParam === 'admin';
+      const endpoint = isAdminLogin 
+        ? '/api/auth/admin-login' 
+        : `/api/auth/login?role=${roleParam}`;
       
-      console.log(`Attempting ${isAdminLogin ? 'admin' : 'regular'} login`);
+      console.log(`Attempting ${isAdminLogin ? 'admin' : 'regular'} login with role: ${roleParam}`);
+      console.log('Full login credentials:', JSON.stringify(credentials));
       
       const response = await axios.post(endpoint, credentials);
       
       if (response.data.success) {
         const { token, user } = response.data;
+        
+        // Check if email is verified
+        if (!user.isVerified && user.role !== 'admin') {
+          return { 
+            success: false, 
+            message: 'Please verify your email before logging in. Check your inbox for a verification link.' 
+          };
+        }
         
         // Save to localStorage and state
         localStorage.setItem('token', token);
@@ -78,6 +88,16 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Login error:', error);
+      
+      // If this is an email verification issue, provide a clear message
+      if (error.response?.status === 401 && 
+          error.response?.data?.message?.includes('verify')) {
+        return { 
+          success: false, 
+          message: 'Your email address has not been verified. Please check your inbox for the verification link.' 
+        };
+      }
+      
       return { 
         success: false, 
         message: error.response?.data?.message || 'An error occurred during login' 
@@ -94,7 +114,6 @@ export const AuthProvider = ({ children }) => {
     setRole(null);
     navigate('/login');
   };
-
   // Register function
   const register = async (userData) => {
     try {
@@ -107,10 +126,8 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Registration error:', error);
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'An error occurred during registration' 
-      };
+      // Throw the error so it can be caught by the component
+      throw error;
     }
   };
 

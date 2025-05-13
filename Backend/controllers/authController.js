@@ -10,7 +10,7 @@ const { asyncHandler, createError } = require('../middleware/errorHandler');
 const { generateToken, verifyToken } = require('../utils/auth');
 const { hashPassword, comparePassword } = require('../utils/encryption');
 const { createUserWithProfile } = require('../database/transactions/userTransactions');
-const { sendVerificationEmail } = require('../services/emailService');
+const { sendVerificationEmail, sendRegistrationSuccessEmail } = require('../services/emailService');
 
 /**
  * Register a new user
@@ -47,14 +47,17 @@ exports.register = asyncHandler(async (req, res) => {
     currentYear,
     expectedGraduationYear,
     donorType,
-    organizationName
+    organizationName,
+    // Special flag for skipping verification
+    skipVerification
   } = req.body;
-  
-  // Check if email is already in use
-  const existingUser = await User.findOne({ email });
+    // Check if email is already in use with the same role
+  const userRole = role || 'student'; // Default to student if not specified
+  const existingUser = await User.findOne({ email, role: userRole });
   
   if (existingUser) {
-    throw createError('Email is already registered', 400);
+    // Block registration if the email is already registered (regardless of role)
+    throw createError('This email is already registered for this role. Please log in or use a different email/role.', 400);
   }
 
   // Create base user with shared fields
@@ -63,17 +66,20 @@ exports.register = asyncHandler(async (req, res) => {
     password,
     firstName,
     lastName,
-    role: role || 'student', // Default to student if not specified
+    role: userRole,
     phoneNumber,
     isActive: true,
-    isVerified: false
+    // If skipVerification is true, the user is verified immediately
+    isVerified: skipVerification === true
   };
   
   let user;
-  
-  // Create user based on role (using discriminator pattern)
+    // Create user based on role (using discriminator pattern)
   try {
     const userRole = role || 'student'; // Default to student if not specified
+    
+    // Prepare profile-specific data
+    let profileData = {};
     
     switch (userRole) {
       case 'student': {
@@ -90,9 +96,8 @@ exports.register = asyncHandler(async (req, res) => {
           throw createError('Date of birth is required', 400);
         }
 
-        // Prepare student data
-        const studentData = {
-          ...baseUserData,
+        // Prepare student profile data
+        profileData = {
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
           gender,
           cnic,
@@ -101,26 +106,34 @@ exports.register = asyncHandler(async (req, res) => {
           currentYear: currentYear ? Number(currentYear) : undefined,
           expectedGraduationYear: expectedGraduationYear ? Number(expectedGraduationYear) : undefined
         };
-        
-        // Log the student data for debugging
-        console.log('Creating student with data:', JSON.stringify(studentData, null, 2));
-        
-        // Create student
-        user = await Student.create(studentData);
         break;
       }
         
-      case 'donor':
-        user = await Donor.create({
-          ...baseUserData,
+      case 'donor': {
+        // Prepare donor profile data
+        profileData = {
           donorType: donorType || 'individual',
           organizationName
-        });
+        };
         break;
+      }
         
       default:
         throw createError('Invalid role specified', 400);
     }
+    
+    // Log the data for debugging
+    console.log('Creating user with data:', JSON.stringify({
+      baseUserData: { ...baseUserData, password: '[REDACTED]' },
+      profileData
+    }, null, 2));
+    
+    // Import the function directly to avoid module caching issues
+    const userTransactions = require('../database/transactions/userTransactions');
+    
+    // Use transaction to create user with profile
+    user = await userTransactions.createUserWithProfile(baseUserData, profileData);
+    console.log('User created:', user);
   } catch (error) {
     // Enhanced error handling for validation errors
     if (error.name === 'ValidationError') {
@@ -143,10 +156,39 @@ exports.register = asyncHandler(async (req, res) => {
     throw createError('Error creating user: ' + (error.message || 'Unknown error'), 500);
   }
   
-  // Generate verification token
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  user.verificationToken = verificationToken;
-  await user.save();
+  // If skipping verification, send success email, otherwise send verification email with token
+  if (skipVerification === true) {
+    console.log('Skipping verification for user:', user.email);
+    // Ensure user is marked as verified
+    user.isVerified = true;
+    // No need for verification token
+    user.verificationToken = undefined;
+    await user.save();
+    
+    // Send registration success email
+    try {
+      const emailService = require('../services/emailService');
+      await emailService.sendRegistrationSuccessEmail(user);
+      console.log('Registration success email sent to:', user.email);
+    } catch (emailError) {
+      console.error('Failed to send registration success email:', emailError);
+    }
+  } else {
+    // Generate verification token
+    console.log('Setting up verification for user:', user.email);
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    user.verificationToken = verificationToken;
+    user.isVerified = false; // Explicitly set to false
+    await user.save();
+    
+    // Send verification email
+    try {
+      await sendVerificationEmail(user);
+      console.log('Verification email sent to:', user.email);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+    }
+  }
   
   // Generate JWT token
   const token = user.generateAuthToken();
@@ -162,7 +204,8 @@ exports.register = asyncHandler(async (req, res) => {
     message: 'User registered successfully',
     user: userWithoutPassword,
     token,
-    refreshToken
+    refreshToken,
+    isVerified: user.isVerified
   });
 });
 
@@ -172,15 +215,45 @@ exports.register = asyncHandler(async (req, res) => {
  * @access Public
  */
 exports.login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  console.log('Full request body:', JSON.stringify(req.body));
   
-  // Find user by email
-  const user = await User.findOne({ email }).select('+password +loginAttempts +lockedUntil');
+  // Extract credentials from request body
+  const { email, password } = req.body;
+  // Try to get role from various places in the request
+  const role = req.body.role || req.query.role || 'student';
+  
+  console.log(`Login attempt for email: ${email} with role: ${role}`);
+  
+  // Debug: Check for any users with this email
+  const allUsersWithEmail = await User.find({ email });
+  console.log(`Found ${allUsersWithEmail.length} users with email ${email}:`);
+  allUsersWithEmail.forEach(u => console.log(`- User ID: ${u._id}, Role: ${u.role}, Verified: ${u.isVerified}`));
+  
+  // Special case: if multiple roles exist for this email and we're defaulting to student,
+  // check if the student role exists, otherwise use the first role found
+  let user;
+  
+  if (role === 'student' && allUsersWithEmail.length > 0) {
+    user = await User.findOne({ email, role }).select('+password +loginAttempts +lockedUntil');
+    
+    // If no student account found but other accounts exist, use the first one
+    if (!user && allUsersWithEmail.length > 0) {
+      const firstUserRole = allUsersWithEmail[0].role;
+      console.log(`No student account found, trying role: ${firstUserRole}`);
+      user = await User.findOne({ email, role: firstUserRole }).select('+password +loginAttempts +lockedUntil');
+    }
+  } else {
+    // Standard case: look for the specific role
+    user = await User.findOne({ email, role }).select('+password +loginAttempts +lockedUntil');
+  }
   
   // Check if user exists
   if (!user) {
+    console.log(`User not found with email: ${email} and role: ${role}`);
     throw createError('Invalid credentials', 401);
   }
+  
+  console.log(`Found user with ID: ${user._id}, Role: ${user.role}`);
   
   // Check if account is locked
   if (user.lockedUntil && user.lockedUntil > new Date()) {
@@ -526,28 +599,108 @@ exports.resetPassword = asyncHandler(async (req, res) => {
 
 /**
  * Verify email address
- * @route GET /api/auth/verify-email/:token
+ * @route GET /api/auth/verify-email/:role/:token
  * @access Public
  */
 exports.verifyEmail = asyncHandler(async (req, res) => {
-  const { token } = req.params;
+  const { role, token } = req.params;
+  console.log('Verification attempt with:', { role, token });
   
-  // Find user with verification token
-  const user = await User.findOne({ verificationToken: token });
+  if (!token || !role) {
+    console.error('Missing token or role in params');
+    throw createError('Invalid verification parameters', 400);
+  }
+  
+  // First attempt: direct match with role and token
+  let user = await User.findOne({ verificationToken: token, role });
+  console.log('Direct match found:', user ? 'Yes' : 'No');
   
   if (!user) {
+    // Try all unverified users with this role to find a match
+    const users = await User.find({ role, isVerified: false });
+    console.log(`Found ${users.length} unverified users with role ${role}`);
+    
+    for (const potentialUser of users) {
+      console.log('Checking user:', potentialUser.email);
+      console.log('User token:', potentialUser.verificationToken);
+      console.log('URL token:', token);
+      
+      if (potentialUser.verificationToken && 
+          potentialUser.verificationToken.toLowerCase() === token.toLowerCase()) {
+        user = potentialUser;
+        console.log('Found match with case-insensitive comparison for', potentialUser.email);
+        break;
+      }
+    }
+  }
+  
+  if (!user) {
+    console.error('No user found with token:', token);
     throw createError('Invalid verification token', 400);
   }
+  
+  // Print all user details for debugging
+  console.log('User before verification update:', JSON.stringify(user, null, 2));
   
   // Mark user as verified
   user.isVerified = true;
   user.verificationToken = undefined;
   
+  try {
+    await user.save();
+    console.log('User verified successfully. Updated user:', JSON.stringify(user, null, 2));
+    
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+  } catch (saveError) {
+    console.error('Error saving verified user:', saveError);
+    throw createError('Error updating user verification status', 500);
+  }
+});
+
+/**
+ * Resend verification email
+ * @route POST /api/auth/resend-verification
+ * @access Public
+ */
+exports.resendVerification = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  // Try to get role from both body and query params
+  const role = req.query.role || req.body.role || 'student';
+  
+  console.log(`Resend verification request for email: ${email}, role: ${role}`);
+  
+  // Find user by email and role
+  const user = await User.findOne({ email, role });
+  
+  // Even if user not found, don't reveal that info for security
+  if (!user || user.isVerified) {
+    console.log(`User not found or already verified for email: ${email}, role: ${role}`);
+    return res.status(200).json({
+      success: true,
+      message: 'If your email is registered and not verified, a new verification link has been sent.'
+    });
+  }
+  
+  // Generate new verification token
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  user.verificationToken = verificationToken;
   await user.save();
+  
+  // Send verification email
+  try {
+    await sendVerificationEmail(user);
+    console.log('Resent verification email to:', email);
+  } catch (emailError) {
+    console.error('Failed to resend verification email:', emailError);
+    // Still return success to not reveal if the email exists
+  }
   
   res.status(200).json({
     success: true,
-    message: 'Email verified successfully'
+    message: 'If your email is registered and not verified, a new verification link has been sent.'
   });
 });
 
@@ -654,4 +807,170 @@ exports.validateToken = asyncHandler(async (req, res) => {
     success: true,
     user: req.user
   });
+});
+
+/**
+ * Direct verification endpoint with token and role as query parameters
+ * @route GET /api/auth/direct-verify
+ * @access Public
+ */
+exports.directVerify = asyncHandler(async (req, res) => {
+  const { token, role, email } = req.query;
+  console.log('Direct verification attempt with:', { role, token, email });
+  
+  if (!token || !role) {
+    console.error('Missing token or role in query params');
+    throw createError('Missing token or role', 400);
+  }
+  
+  let user = null;
+  
+  // If email is provided, try to find the user directly
+  if (email) {
+    user = await User.findOne({ email, role });
+    console.log('User found by email and role:', user ? 'Yes' : 'No');
+    
+    // Check if token matches
+    if (user && user.verificationToken) {
+      console.log('Comparing tokens:', {
+        'DB token': user.verificationToken,
+        'URL token': token,
+        'Match': user.verificationToken.toLowerCase() === token.toLowerCase()
+      });
+    }
+  }
+  
+  // If not found by email or token doesn't match, search all unverified users
+  if (!user || user.verificationToken !== token) {
+    const users = await User.find({ role, isVerified: false });
+    console.log(`Found ${users.length} unverified users with role ${role}`);
+    
+    for (const potentialUser of users) {
+      console.log('Checking user:', potentialUser.email);
+      console.log('User token:', potentialUser.verificationToken);
+      console.log('URL token:', token);
+      
+      if (potentialUser.verificationToken && 
+          potentialUser.verificationToken.toLowerCase() === token.toLowerCase()) {
+        user = potentialUser;
+        console.log('Found match with case-insensitive comparison for', potentialUser.email);
+        break;
+      }
+    }
+  }
+  
+  if (!user) {
+    console.error('No user found for verification');
+    throw createError('Invalid verification token', 400);
+  }
+  
+  // Print user details for debugging
+  console.log('User before verification update:', JSON.stringify(user, null, 2));
+  
+  // Mark user as verified
+  user.isVerified = true;
+  user.verificationToken = undefined;
+  
+  try {
+    await user.save();
+    console.log('User verified successfully. Updated user:', JSON.stringify(user, null, 2));
+    
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully',
+      email: user.email
+    });
+  } catch (saveError) {
+    console.error('Error saving verified user:', saveError);
+    throw createError('Error updating user verification status', 500);
+  }
+});
+
+/**
+ * One-step verification that handles verification and redirects to success page
+ * @route GET /api/auth/verify
+ * @access Public
+ */
+exports.verifyAndRedirect = asyncHandler(async (req, res) => {
+  const { token, role, email } = req.query;
+  console.log('One-step verification attempt:', { role, token, email });
+  
+  if (!token || !role) {
+    console.error('Missing token or role');
+    return res.redirect(`${config.frontendUrl}/verification-failed`);
+  }
+  
+  try {
+    // Try to find the user directly by email and role
+    let user = null;
+    
+    if (email) {
+      user = await User.findOne({ email, role });
+      console.log('Found user by email:', user ? 'Yes' : 'No');
+      
+      // Verify token matches
+      if (user && user.verificationToken) {
+        const tokenMatches = user.verificationToken.toLowerCase() === token.toLowerCase();
+        console.log('Token match for user:', tokenMatches);
+        
+        if (!tokenMatches) {
+          user = null; // Reset if token doesn't match
+        }
+      }
+    }
+    
+    // If not found by email and role, try by token
+    if (!user) {
+      user = await User.findOne({ verificationToken: token, role });
+      console.log('Found user by token and role:', user ? 'Yes' : 'No');
+    }
+    
+    // If still not found, try all unverified users with this role
+    if (!user) {
+      console.log('Direct match not found, trying all unverified users with role');
+      const users = await User.find({ role, isVerified: false });
+      console.log(`Found ${users.length} unverified users with role ${role}`);
+      
+      // Try to find the user by case-insensitive token
+      for (const potentialUser of users) {
+        console.log(`Checking ${potentialUser.email} with token: ${potentialUser.verificationToken}`);
+        
+        if (potentialUser.verificationToken && 
+            potentialUser.verificationToken.toLowerCase() === token.toLowerCase()) {
+          user = potentialUser;
+          console.log('Found user by case-insensitive token comparison:', user.email);
+          break;
+        }
+      }
+    }
+    
+    if (!user) {
+      console.error('No matching user found for verification');
+      return res.redirect(`${config.frontendUrl}/verification-failed`);
+    }
+    
+    // CRITICAL: Print user details before making any changes
+    console.log('User BEFORE verification update:', JSON.stringify(user, null, 2));
+    
+    // Force an update directly with an atomic operation
+    const updateResult = await User.updateOne(
+      { _id: user._id },
+      { 
+        $set: { isVerified: true },
+        $unset: { verificationToken: 1 }
+      }
+    );
+    
+    console.log('Update result:', updateResult);
+    
+    // Fetch the user again to confirm changes were applied
+    const updatedUser = await User.findById(user._id);
+    console.log('User AFTER verification update:', JSON.stringify(updatedUser, null, 2));
+    
+    // Redirect to success page on the frontend
+    return res.redirect(`${config.frontendUrl}/login?verified=true`);
+  } catch (error) {
+    console.error('Verification error:', error);
+    return res.redirect(`${config.frontendUrl}/verification-failed`);
+  }
 });
