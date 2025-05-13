@@ -92,6 +92,7 @@ const scholarshipService = {
   // Admin-specific methods for consistent handling
   adminGetScholarship: (id) => api.get(`/admin/scholarships/${id}`),
   adminUpdateScholarship: (id, scholarshipData) => api.put(`/admin/scholarships/${id}`, scholarshipData),
+  adminReviewScholarship: (id, reviewData) => api.put(`/admin/scholarships/${id}/review`, reviewData),
 };
 
 // Admin services

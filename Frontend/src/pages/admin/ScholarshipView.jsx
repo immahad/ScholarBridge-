@@ -54,7 +54,7 @@ const AdminScholarshipView = () => {
     }
     
     try {
-      const response = await scholarshipService.adminUpdateScholarship(
+      const response = await scholarshipService.adminReviewScholarship(
         id,
         {
           status: reviewStatus,
