@@ -326,16 +326,16 @@ const AdminReports = () => {
   };
 
   const prepareScholarshipStatusData = (data) => {
-    if (!data?.summary?.statusDistribution) return [];
-    return data.summary.statusDistribution.map(item => ({
+    if (!data?.summary?.scholarshipsByStatus) return [];
+    return data.summary.scholarshipsByStatus.map(item => ({
       name: item.status.charAt(0).toUpperCase() + item.status.slice(1),
       value: item.count
     }));
   };
 
   const prepareScholarshipCategoryData = (data) => {
-    if (!data?.summary?.categoryDistribution) return [];
-    return data.summary.categoryDistribution.map(item => ({
+    if (!data?.summary?.scholarshipsByCategory) return [];
+    return data.summary.scholarshipsByCategory.map(item => ({
       name: item.category || 'Uncategorized',
       value: item.count
     }));
@@ -351,8 +351,8 @@ const AdminReports = () => {
   };
 
   const prepareApplicationStatusData = (data) => {
-    if (!data?.summary?.statusDistribution) return [];
-    return data.summary.statusDistribution.map(item => ({
+    if (!data?.summary?.applicationsByStatus) return [];
+    return data.summary.applicationsByStatus.map(item => ({
       name: item.status.charAt(0).toUpperCase() + item.status.slice(1),
       value: item.count
     }));
@@ -361,7 +361,7 @@ const AdminReports = () => {
   // Custom pie chart label component
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name, value }) => {
     const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.65;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
@@ -369,10 +369,14 @@ const AdminReports = () => {
       <text 
         x={x} 
         y={y} 
-        fill="white" 
+        fill="#ff0000" 
         textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central"
-        fontSize={12}
+        fontSize={14}
+        fontWeight="bold"
+        stroke="#ffffff"
+        strokeWidth={1}
+        paintOrder="stroke"
       >
         {`${name}: ${(percent * 100).toFixed(0)}%`}
       </text>
@@ -612,7 +616,7 @@ const AdminReports = () => {
                     {/* User role distribution pie chart */}
                     <div className="chart-container">
                       <h4 className="font-medium text-md mb-3 text-center">User Distribution by Role</h4>
-                      <div style={{ width: '100%', height: 300 }}>
+                      <div style={{ width: '100%', height: 400 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
@@ -621,7 +625,7 @@ const AdminReports = () => {
                               cy="50%"
                               labelLine={false}
                               label={renderCustomizedLabel}
-                              outerRadius={80}
+                              outerRadius={120}
                               fill="#8884d8"
                               dataKey="value"
                             >
@@ -630,7 +634,7 @@ const AdminReports = () => {
                               ))}
                             </Pie>
                             <Tooltip formatter={(value) => formatNumber(value)} />
-                            <Legend />
+                            <Legend wrapperStyle={{ fontSize: 14, fontWeight: "bold" }} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
@@ -639,7 +643,7 @@ const AdminReports = () => {
                     {/* User growth line chart */}
                     <div className="chart-container">
                       <h4 className="font-medium text-md mb-3 text-center">Monthly User Growth</h4>
-                      <div style={{ width: '100%', height: 300 }}>
+                      <div style={{ width: '100%', height: 400 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart
                             data={prepareUserGrowthChartData(reportData.users)}
@@ -649,7 +653,7 @@ const AdminReports = () => {
                             <XAxis dataKey="name" />
                             <YAxis />
                             <Tooltip formatter={(value) => formatNumber(value)} />
-                            <Legend />
+                            <Legend wrapperStyle={{ fontSize: 14, fontWeight: "bold" }} />
                             <Line type="monotone" dataKey="Students" stroke="#8884d8" activeDot={{ r: 8 }} />
                             <Line type="monotone" dataKey="Donors" stroke="#82ca9d" />
                             <Line type="monotone" dataKey="Admins" stroke="#ffc658" />
@@ -679,7 +683,7 @@ const AdminReports = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {reportData.scholarships?.summary?.statusDistribution?.map((status, index) => (
+                          {reportData.scholarships?.summary?.scholarshipsByStatus?.map((status, index) => (
                             <tr key={index} className="border-b">
                               <td className="px-4 py-2">{status.status.charAt(0).toUpperCase() + status.status.slice(1)}</td>
                               <td className="px-4 py-2">{formatNumber(status.count)}</td>
@@ -694,7 +698,7 @@ const AdminReports = () => {
                     </div>
                   </div>
                   
-                  {reportData.scholarships?.summary?.categoryDistribution && (
+                  {reportData.scholarships?.summary?.scholarshipsByCategory && (
                     <div>
                       <h4 className="font-medium text-md mb-3">Scholarship Categories</h4>
                       <div className="overflow-x-auto">
@@ -706,7 +710,7 @@ const AdminReports = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {reportData.scholarships.summary.categoryDistribution.map((category, index) => (
+                            {reportData.scholarships.summary.scholarshipsByCategory.map((category, index) => (
                               <tr key={index} className="border-b">
                                 <td className="px-4 py-2">{category.category || 'Uncategorized'}</td>
                                 <td className="px-4 py-2">{formatNumber(category.count)}</td>
@@ -726,7 +730,7 @@ const AdminReports = () => {
                     {/* Scholarship status pie chart */}
                     <div className="chart-container">
                       <h4 className="font-medium text-md mb-3 text-center">Scholarships by Status</h4>
-                      <div style={{ width: '100%', height: 300 }}>
+                      <div style={{ width: '100%', height: 400 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
@@ -735,7 +739,7 @@ const AdminReports = () => {
                               cy="50%"
                               labelLine={false}
                               label={renderCustomizedLabel}
-                              outerRadius={80}
+                              outerRadius={120}
                               fill="#8884d8"
                               dataKey="value"
                             >
@@ -744,7 +748,7 @@ const AdminReports = () => {
                               ))}
                             </Pie>
                             <Tooltip formatter={(value) => formatNumber(value)} />
-                            <Legend />
+                            <Legend wrapperStyle={{ fontSize: 14, fontWeight: "bold" }} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
@@ -753,7 +757,7 @@ const AdminReports = () => {
                     {/* Scholarship category bar chart */}
                     <div className="chart-container">
                       <h4 className="font-medium text-md mb-3 text-center">Scholarships by Category</h4>
-                      <div style={{ width: '100%', height: 300 }}>
+                      <div style={{ width: '100%', height: 400 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart
                             data={prepareScholarshipCategoryData(reportData.scholarships)}
@@ -768,7 +772,7 @@ const AdminReports = () => {
                             />
                             <YAxis />
                             <Tooltip formatter={(value) => formatNumber(value)} />
-                            <Legend />
+                            <Legend wrapperStyle={{ fontSize: 14, fontWeight: "bold" }} />
                             <Bar dataKey="value" name="Count" fill="#82ca9d" />
                           </BarChart>
                         </ResponsiveContainer>
@@ -831,7 +835,7 @@ const AdminReports = () => {
                   
                   <div className="mb-6">
                     <h4 className="font-medium text-md mb-3 text-center">Monthly Donation Trends</h4>
-                    <div style={{ width: '100%', height: 300 }}>
+                    <div style={{ width: '100%', height: 400 }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart
                           data={prepareDonationMonthlyData(reportData.donations)}
@@ -847,7 +851,7 @@ const AdminReports = () => {
                               return formatNumber(value);
                             }} 
                           />
-                          <Legend />
+                          <Legend wrapperStyle={{ fontSize: 14, fontWeight: "bold" }} />
                           <Line yAxisId="left" type="monotone" dataKey="amount" name="Amount" stroke="#8884d8" activeDot={{ r: 8 }} />
                           <Line yAxisId="right" type="monotone" dataKey="count" name="Count" stroke="#82ca9d" />
                         </LineChart>
@@ -875,7 +879,7 @@ const AdminReports = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {reportData.applications?.summary?.statusDistribution?.map((status, index) => (
+                          {reportData.applications?.summary?.applicationsByStatus?.map((status, index) => (
                             <tr key={index} className="border-b">
                               <td className="px-4 py-2">{status.status.charAt(0).toUpperCase() + status.status.slice(1)}</td>
                               <td className="px-4 py-2">{formatNumber(status.count)}</td>
@@ -890,7 +894,7 @@ const AdminReports = () => {
                     </div>
                   </div>
                   
-                  {reportData.applications?.summary?.monthlyTotals && (
+                  {reportData.applications?.details?.monthlyTrends && (
                     <div>
                       <h4 className="font-medium text-md mb-3">Monthly Application Totals</h4>
                       <div className="overflow-x-auto">
@@ -903,7 +907,7 @@ const AdminReports = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {reportData.applications.summary.monthlyTotals.map((month, index) => (
+                            {reportData.applications.details.monthlyTrends.map((month, index) => (
                               <tr key={index} className="border-b">
                                 <td className="px-4 py-2">{month.month}</td>
                                 <td className="px-4 py-2">{month.year}</td>
@@ -922,7 +926,7 @@ const AdminReports = () => {
                   
                   <div className="mb-6">
                     <h4 className="font-medium text-md mb-3 text-center">Applications by Status</h4>
-                    <div style={{ width: '100%', height: 300 }}>
+                    <div style={{ width: '100%', height: 400 }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart
                           data={prepareApplicationStatusData(reportData.applications)}
@@ -932,7 +936,7 @@ const AdminReports = () => {
                           <XAxis dataKey="name" />
                           <YAxis />
                           <Tooltip formatter={(value) => formatNumber(value)} />
-                          <Legend />
+                          <Legend wrapperStyle={{ fontSize: 14, fontWeight: "bold" }} />
                           <Bar dataKey="value" name="Applications" fill="#8884d8">
                             {prepareApplicationStatusData(reportData.applications).map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -943,13 +947,13 @@ const AdminReports = () => {
                     </div>
                   </div>
                   
-                  {reportData.applications.summary?.monthlyTotals && (
+                  {reportData.applications.details?.monthlyTrends && (
                     <div>
                       <h4 className="font-medium text-md mb-3 text-center">Monthly Application Submissions</h4>
-                      <div style={{ width: '100%', height: 300 }}>
+                      <div style={{ width: '100%', height: 400 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart
-                            data={reportData.applications.summary.monthlyTotals.map(item => ({
+                            data={reportData.applications.details.monthlyTrends.map(item => ({
                               name: `${item.month}/${item.year}`,
                               Applications: item.count
                             }))}
@@ -959,7 +963,7 @@ const AdminReports = () => {
                             <XAxis dataKey="name" />
                             <YAxis />
                             <Tooltip formatter={(value) => formatNumber(value)} />
-                            <Legend />
+                            <Legend wrapperStyle={{ fontSize: 14, fontWeight: "bold" }} />
                             <Line type="monotone" dataKey="Applications" stroke="#8884d8" activeDot={{ r: 8 }} />
                           </LineChart>
                         </ResponsiveContainer>

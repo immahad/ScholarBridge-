@@ -239,13 +239,18 @@ exports.createScholarship = async (req, res) => {
     });
     
     // Process criteria fields
+    console.log('DEBUG: Raw criteria from request:', criteria);
+    
+    // Ensure criteria is initialized properly
     const scholarshipCriteria = {
-      minGPA: criteria?.minGPA || 0,
-      requiredDocuments: criteria?.requiredDocuments || ['cv', 'resume', 'id'],
-      eligibleInstitutions: criteria?.eligibleInstitutions || [],
-      eligiblePrograms: criteria?.eligiblePrograms || [],
-      additionalCriteria: criteria?.additionalCriteria || []
+      minGPA: criteria && (criteria.minGPA !== undefined && criteria.minGPA !== null) ? Number(criteria.minGPA) : 0,
+      requiredDocuments: criteria && Array.isArray(criteria.requiredDocuments) ? criteria.requiredDocuments : ['transcript'],
+      eligibleInstitutions: criteria && Array.isArray(criteria.eligibleInstitutions) ? criteria.eligibleInstitutions : [],
+      eligiblePrograms: criteria && Array.isArray(criteria.eligiblePrograms) ? criteria.eligiblePrograms : [],
+      additionalCriteria: criteria && Array.isArray(criteria.additionalCriteria) ? criteria.additionalCriteria : []
     };
+    
+    console.log('DEBUG: Processed scholarshipCriteria:', scholarshipCriteria);
 
     const newScholarship = new Scholarship({
       title: scholarshipTitle,
@@ -262,6 +267,16 @@ exports.createScholarship = async (req, res) => {
     });
 
     await newScholarship.save();
+    
+    // Verify the saved data by retrieving the scholarship from the database again
+    const savedScholarship = await Scholarship.findById(newScholarship._id);
+    console.log('DEBUG: Actual saved scholarship from database:', {
+      _id: savedScholarship._id,
+      title: savedScholarship.title,
+      criteria: savedScholarship.criteria,
+      // Convert Mongoose document to plain object to see all fields
+      fullObject: JSON.stringify(savedScholarship.toObject())
+    });
     
     console.log('DEBUG: Saved scholarship:', {
       _id: newScholarship._id,

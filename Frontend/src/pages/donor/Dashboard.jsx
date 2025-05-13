@@ -29,6 +29,7 @@ const DonorDashboard = () => {
   const statsRef = useRef(null);
   const donationChartRef = useRef(null);
   const recentDonationsTableRef = useRef(null);
+  const scholarshipsRef = useRef(null);
 
   useEffect(() => {
     const fetchDonorDashboardData = async () => {
@@ -158,6 +159,14 @@ const DonorDashboard = () => {
         pdf.text('Summary Statistics', 10, yPos);
         yPos += 7;
         yPos = await addImageToPdf(pdf, statsRef, yPos);
+      }
+      
+      if (scholarshipsRef.current) {
+        pdf.setFontSize(14);
+        if (yPos + 10 > pdf.internal.pageSize.getHeight() - 10) { pdf.addPage(); yPos = 15; }
+        pdf.text('My Scholarships', 10, yPos);
+        yPos += 7;
+        yPos = await addImageToPdf(pdf, scholarshipsRef, yPos);
       }
       
       if (donationChartRef.current) {
@@ -388,6 +397,50 @@ const DonorDashboard = () => {
                   <Link to="/donor/scholarships" className="btn btn-link">
                     View All Scholarships <FiArrowRight className="icon-right" />
                   </Link>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* PDF-friendly version of My Scholarships (hidden in UI, used for PDF export) */}
+          <div className="dashboard-section pdf-only" ref={scholarshipsRef} style={{ position: 'absolute', left: '-9999px', width: '800px' }}>
+            <div className="scholarships-list">
+              {allScholarships.length === 0 ? (
+                <div className="empty-state">
+                  <p>You haven't created any scholarships yet.</p>
+                </div>
+              ) : (
+                <div className="scholarship-cards">
+                  {allScholarships.map(scholarship => (
+                    <div key={scholarship._id} className="application-card">
+                      <div className="application-header">
+                        <h3>{scholarship.title}</h3>
+                        <div className={`status-badge ${getStatusClass(scholarship.status)}`}>
+                          {getStatusIcon(scholarship.status)}
+                          <span>{getStatusLabel(scholarship.status)}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="application-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Amount:</span>
+                          <span className="detail-value">${scholarship.amount.toLocaleString()}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Deadline:</span>
+                          <span className="detail-value">{formatDate(scholarship.deadlineDate)}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Applicants:</span>
+                          <span className="detail-value">{scholarship.applicantCount || 0}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Category:</span>
+                          <span className="detail-value">{scholarship.category}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

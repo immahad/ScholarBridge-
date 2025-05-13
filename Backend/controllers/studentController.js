@@ -531,6 +531,7 @@ exports.getDashboard = asyncHandler(async (req, res) => {
 
   // Application stats
   const applicationStats = {
+    total: student.scholarshipApplications.length,
     pending: student.scholarshipApplications.filter(app => app.status === 'pending').length,
     approved: student.scholarshipApplications.filter(app => app.status === 'approved').length,
     rejected: student.scholarshipApplications.filter(app => app.status === 'rejected').length,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthUtils';
@@ -8,6 +8,7 @@ import '../../styles/auth.css';
 
 const RegisterForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { register } = useAuth();
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -15,6 +16,10 @@ const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(false);
+
+  // Get role from URL query params if available
+  const queryParams = new URLSearchParams(location.search);
+  const roleFromUrl = queryParams.get('role');
 
   // Form validation schema
   const registerSchema = Yup.object().shape({
@@ -92,7 +97,7 @@ const RegisterForm = () => {
       email: '',
       password: '',
       confirmPassword: '',
-      role: 'student',
+      role: roleFromUrl || 'student',
       phoneNumber: '',
       dateOfBirth: '',
       gender: '',

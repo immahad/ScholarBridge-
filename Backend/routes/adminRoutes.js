@@ -60,6 +60,9 @@ router.get('/scholarships', adminController.getAllScholarships);
 // Get scholarship by ID (admin view - important for viewing pending scholarships)
 router.get('/scholarships/:id', adminController.getScholarshipById);
 
+// Update scholarship
+router.put('/scholarships/:id', adminController.updateScholarship);
+
 // Delete scholarship
 router.delete('/scholarships/:id', adminController.deleteScholarship);
 

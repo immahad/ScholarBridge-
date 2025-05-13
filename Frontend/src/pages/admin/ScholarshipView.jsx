@@ -4,6 +4,7 @@ import { FiCalendar, FiDollarSign, FiBookOpen, FiUser, FiChevronLeft, FiCheck, F
 import { useAuth } from '../../context/AuthUtils';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { scholarshipService } from '../../services/api';
 
 const AdminScholarshipView = () => {
   const { id } = useParams();
@@ -22,10 +23,8 @@ const AdminScholarshipView = () => {
         setLoading(true);
         setError(null);
         
-        // Use the admin endpoint to get scholarship details
-        const response = await axios.get(`/api/admin/scholarships/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // Use the adminGetScholarship method to ensure consistency with admin operations
+        const response = await scholarshipService.adminGetScholarship(id);
         
         console.log('Admin scholarship data:', response.data);
         setScholarship(response.data.scholarship);
@@ -55,14 +54,11 @@ const AdminScholarshipView = () => {
     }
     
     try {
-      const response = await axios.put(
-        `/api/admin/scholarships/${id}/review`,
+      const response = await scholarshipService.adminUpdateScholarship(
+        id,
         {
           status: reviewStatus,
           rejectionReason: rejectionReason
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
         }
       );
       

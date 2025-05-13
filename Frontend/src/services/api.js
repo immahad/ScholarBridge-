@@ -70,10 +70,15 @@ const studentService = {
 const scholarshipService = {
   getAllScholarships: (filters) => api.get('/scholarships', { params: filters }),
   getScholarship: (id) => api.get(`/scholarships/${id}`),
+  getScholarshipById: (id) => api.get(`/scholarships/${id}`),
   createScholarship: (scholarshipData) => api.post('/scholarships', scholarshipData),
   updateScholarship: (id, scholarshipData) => api.put(`/scholarships/${id}`, scholarshipData),
   deleteScholarship: (id) => api.delete(`/scholarships/${id}`),
   applyForScholarship: (id, applicationData) => api.post(`/applications/apply/${id}`, applicationData),
+  
+  // Admin-specific methods for consistent handling
+  adminGetScholarship: (id) => api.get(`/admin/scholarships/${id}`),
+  adminUpdateScholarship: (id, scholarshipData) => api.put(`/admin/scholarships/${id}`, scholarshipData),
 };
 
 // Admin services
