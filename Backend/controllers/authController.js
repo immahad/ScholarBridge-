@@ -120,11 +120,11 @@ exports.register = asyncHandler(async (req, res) => {
         
       default:
         throw createError('Invalid role specified', 400);
-    }
-    
-    // Log the data for debugging
+    }    // Log the data for debugging
+    const baseUserDataSafe = { ...baseUserData };
+    baseUserDataSafe.password = '[REDACTED]';
     console.log('Creating user with data:', JSON.stringify({
-      baseUserData: { ...baseUserData, password: '[REDACTED]' },
+      baseUserData: baseUserDataSafe,
       profileData
     }, null, 2));
     

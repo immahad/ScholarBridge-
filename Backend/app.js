@@ -68,6 +68,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/scholarships', scholarshipRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api', triggerRoutes);
 
 // Root route for API health check
 app.get('/api/health', (req, res) => {
@@ -150,5 +151,5 @@ app.use((req, res) => {
     message: 'Resource not found'
   });
 });
-
+ 
 module.exports = app;
