@@ -2,41 +2,41 @@ const express = require('express');
 const router = express.Router();
 const scholarshipController = require('../controllers/scholarshipController');
 const { verifyToken } = require('../middleware/auth');
-const { isAdmin } = require('../middleware/roleCheck');
+const { isAdmin, isDonor, isDonorOrOwner } = require('../middleware/roleCheck');
 const { validate, schemas } = require('../middleware/validation');
+const { isAdminOrDonor } = require('../middleware/roleCheck');
 
-// Public routes
-// Get featured scholarships (public)
+// Important: Specific routes need to come BEFORE wildcard routes (/:id)
+
+// Public routes with specific paths
 router.get('/featured', scholarshipController.getFeaturedScholarships);
-
-// Get scholarships by category (public)
 router.get('/category/:category', scholarshipController.getScholarshipsByCategory);
 
-// Get scholarship statistics (admin only)
-router.get(
-  '/stats',
-  verifyToken,
-  isAdmin,
-  scholarshipController.getScholarshipStats
-);
+// Admin-specific routes with specific paths
+router.get('/stats', verifyToken, isAdmin, scholarshipController.getScholarshipStats);
+router.get('/pending', verifyToken, isAdmin, scholarshipController.getPendingScholarships);
 
-// Get all scholarships (public)
+// Donor-specific routes
+router.get('/donor', verifyToken, isDonor, scholarshipController.getScholarshipsByDonor);
+
+// Admin-specific routes for pending scholarships
+router.get('/pendingDetails/:id', verifyToken, isAdmin, scholarshipController.getPendingScholarshipDetails);
+
+// Generic routes
 router.get('/', scholarshipController.getAllScholarships);
 
-// Get scholarship by ID (public)
-router.get('/:id', scholarshipController.getScholarshipById);
-
-// Admin routes below
-// Create new scholarship (admin only)
+// Create new scholarship (both admin and donor can create)
 router.post(
   '/',
   verifyToken,
-  isAdmin,
-  validate(schemas.admin.createScholarship),
+  isAdminOrDonor,
+  validate(schemas.donor.createScholarship),
   scholarshipController.createScholarship
 );
 
-// Update scholarship (admin only)
+// Routes with :id parameter should be AFTER specific routes
+router.get('/:id', verifyToken, isDonorOrOwner(), scholarshipController.getScholarshipById);
+
 router.put(
   '/:id',
   verifyToken,
@@ -44,7 +44,6 @@ router.put(
   scholarshipController.updateScholarship
 );
 
-// Delete scholarship (admin only)
 router.delete(
   '/:id',
   verifyToken,
@@ -52,7 +51,6 @@ router.delete(
   scholarshipController.deleteScholarship
 );
 
-// Get scholarship applications (admin only)
 router.get(
   '/:id/applications',
   verifyToken,
@@ -60,4 +58,11 @@ router.get(
   scholarshipController.getScholarshipApplications
 );
 
-module.exports = router; 
+router.put(
+  '/:id/review',
+  verifyToken,
+  isAdmin,
+  scholarshipController.reviewScholarship
+);
+
+module.exports = router;

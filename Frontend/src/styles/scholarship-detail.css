@@ -171,6 +171,75 @@
   margin-top: 2rem;
 }
 
+/* Application Status Styles */
+.application-info {
+  background-color: var(--white);
+  border-radius: var(--border-radius-md);
+  padding: 1.5rem;
+  margin-top: 2rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--grey-medium);
+}
+
+.application-info h3 {
+  margin-bottom: 1rem;
+  color: var(--grey-dark);
+  font-size: 1.2rem;
+}
+
+.application-status {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+}
+
+.application-status.pending {
+  background-color: #fff8e1;
+  border-left: 4px solid #ffc107;
+  color: #856404;
+}
+
+.application-status.approved {
+  background-color: #e8f5e9;
+  border-left: 4px solid #4caf50;
+  color: #155724;
+}
+
+.application-status.rejected {
+  background-color: #ffebee;
+  border-left: 4px solid #f44336;
+  color: #721c24;
+}
+
+.application-status.funded {
+  background-color: #e8f0fe;
+  border-left: 4px solid #0c66e4;
+  color: #004085;
+}
+
+/* Apply Section Styles */
+.apply-section {
+  margin-top: 2.5rem;
+  padding: 2rem;
+  background-color: var(--white);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--grey-medium);
+  text-align: center;
+}
+
+.btn-large {
+  font-size: 1.2rem;
+  padding: 1rem 2rem;
+}
+
+.apply-note {
+  margin-top: 1rem;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
 @media (max-width: 992px) {
   .scholarship-content {
     grid-template-columns: 1fr;

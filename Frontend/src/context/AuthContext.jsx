@@ -1,116 +1,134 @@
-import { useState, useEffect } from 'react';
-import { authService } from '../services/api';
-import AuthContext from './AuthUtils';
+import { createContext, useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
-const AuthProvider = ({ children }) => {
+// Create the context
+export const AuthContext = createContext(null);
+
+// Provider component
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [role, setRole] = useState(localStorage.getItem('role') || null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const response = await authService.getCurrentUser();
-          setUser(response.data.user);
+    // Check if user is authenticated on mount
+    const checkAuth = async () => {
+      if (token) {
+        try {
+          const response = await axios.get('/api/auth/validate-token', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (response.data.success) {
+            setUser(response.data.user);
+            setRole(response.data.user.role);
+            localStorage.setItem('role', response.data.user.role);
+          } else {
+            // If token is invalid, logout
+            logout();
+          }
+        } catch (error) {
+          console.error('Error validating token:', error);
+          logout();
         }
-      } catch (err) {
-        console.error('Failed to fetch user data:', err);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     };
 
-    initAuth();
-  }, []);
+    checkAuth();
+  }, [token]);
 
+  // Login function
   const login = async (credentials) => {
     try {
-      setError(null);
-      // Check if this is an admin login
-      let response;
+      // Determine if it's an admin login
+      const isAdminLogin = credentials.role === 'admin';
+      const endpoint = isAdminLogin ? '/api/auth/admin-login' : '/api/auth/login';
       
-      if (credentials.role === 'admin') {
-        // If role is specified as admin, use admin login endpoint
-        const { email, password } = credentials;
-        console.log('Using admin login endpoint with email:', email);
-        response = await authService.adminLogin({ email, password });
+      console.log(`Attempting ${isAdminLogin ? 'admin' : 'regular'} login`);
+      
+      const response = await axios.post(endpoint, credentials);
+      
+      if (response.data.success) {
+        const { token, user } = response.data;
+        
+        // Save to localStorage and state
+        localStorage.setItem('token', token);
+        localStorage.setItem('role', user.role);
+        
+        setToken(token);
+        setUser(user);
+        setRole(user.role);
+        
+        // Redirect based on role
+        if (user.role === 'student') {
+          navigate('/student/dashboard');
+        } else if (user.role === 'donor') {
+          navigate('/donor/dashboard');
+        } else if (user.role === 'admin') {
+          navigate('/admin/dashboard');
+        }
+        
+        return { success: true, user };
       } else {
-        // Otherwise use regular login
-        console.log('Using regular login endpoint');
-        response = await authService.login(credentials);
+        return { success: false, message: response.data.message };
       }
-      
-      console.log('Login response:', response);
-      const { token, user } = response.data;
-      
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      setUser(user);
-      return user;
-    } catch (err) {
-      console.error('Login error:', err);
-      
-      // Detailed error logging
-      if (err.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        console.error('Error response data:', err.response.data);
-        console.error('Error response status:', err.response.status);
-        console.error('Error response headers:', err.response.headers);
-      } else if (err.request) {
-        // The request was made but no response was received
-        console.error('Error request:', err.request);
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        console.error('Error message:', err.message);
-      }
-      
-      const message = err.response?.data?.message || 'Failed to login';
-      setError(message);
-      throw err;
+    } catch (error) {
+      console.error('Login error:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'An error occurred during login' 
+      };
     }
   };
 
+  // Logout function
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    setToken(null);
+    setUser(null);
+    setRole(null);
+    navigate('/login');
+  };
+
+  // Register function
   const register = async (userData) => {
     try {
-      setError(null);
-      const response = await authService.register(userData);
-      return response.data;
-    } catch (err) {
-      const message = err.response?.data?.message || 'Failed to register';
-      setError(message);
-      throw err;
+      const response = await axios.post('/api/auth/register', userData);
+      
+      if (response.data.success) {
+        return { success: true, message: response.data.message };
+      } else {
+        return { success: false, message: response.data.message };
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'An error occurred during registration' 
+      };
     }
   };
 
-  const logout = async () => {
-    try {
-      await authService.logout();
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-    }
-  };
-
-  const value = {
+  // Value to be provided
+  const contextValue = {
     user,
+    token,
+    role,
+    isAuthenticated: !!token,
     loading,
-    error,
     login,
-    register,
     logout,
-    isAuthenticated: !!user,
+    register
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
-
-export default AuthProvider;

@@ -20,7 +20,10 @@ export default defineConfig({
     port: 3000,
     open: true,
     proxy: {
-      // Handle client-side routing
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
       '/admin': {
         target: 'http://localhost:3000',
         changeOrigin: true,

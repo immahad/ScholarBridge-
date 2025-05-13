@@ -634,3 +634,24 @@ exports.checkAdminExists = asyncHandler(async (req, res) => {
     adminExists
   });
 });
+
+/**
+ * Validate JWT token and return user data
+ * @route GET /api/auth/validate-token
+ * @access Private
+ */
+exports.validateToken = asyncHandler(async (req, res) => {
+  // User is already verified by the verifyToken middleware
+  // Just return the user data
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized - Invalid token'
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    user: req.user
+  });
+});

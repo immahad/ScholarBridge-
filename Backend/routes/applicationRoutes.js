@@ -6,9 +6,12 @@ const { isAdmin } = require('../middleware/roleCheck');
 const { validate, schemas } = require('../middleware/validation');
 
 // Apply auth middleware to all routes
-router.use(verifyToken, isAdmin);
+router.use(verifyToken);
 
-// Get all applications across all scholarships
+// Admin-only routes (most application routes are admin-only)
+router.use(isAdmin);
+
+// Get all applications (admin view)
 router.get('/', applicationController.getAllApplications);
 
 // Get application details

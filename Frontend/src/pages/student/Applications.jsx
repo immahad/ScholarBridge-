@@ -1,35 +1,157 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthUtils';
+import '../../styles/student-applications.css';
 
 const StudentApplications = () => {
+  const { token } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
-    // TODO: Fetch student applications from the API
-    // This will be implemented when backend integration is ready
-    setLoading(false);
-  }, []);
+    const fetchApplications = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`/api/students/applications${statusFilter ? `?status=${statusFilter}` : ''}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data.success) {
+          setApplications(response.data.applications);
+        } else {
+          setError('Failed to load applications');
+        }
+      } catch (err) {
+        console.error('Error fetching applications:', err);
+        setError(err.response?.data?.message || 'Failed to load applications. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) {
+      fetchApplications();
+    }
+  }, [token, statusFilter]);
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'status-pending';
+      case 'approved':
+        return 'status-approved';
+      case 'rejected':
+        return 'status-rejected';
+      case 'funded':
+        return 'status-funded';
+      default:
+        return '';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'Pending Review';
+      case 'approved':
+        return 'Approved';
+      case 'rejected':
+        return 'Not Approved';
+      case 'funded':
+        return 'Funded';
+      case 'completed':
+        return 'Completed';
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">My Applications</h1>
+    <div className="student-applications-page">
+      <div className="page-header">
+        <h1>My Scholarship Applications</h1>
+        <p>Track the status of your scholarship applications</p>
+      </div>
+      
+      <div className="filter-section">
+        <label htmlFor="statusFilter">Filter by status:</label>
+        <select
+          id="statusFilter"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="status-filter"
+        >
+          <option value="">All Applications</option>
+          <option value="pending">Pending Review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Not Approved</option>
+          <option value="funded">Funded</option>
+        </select>
+      </div>
       
       {loading ? (
-        <div>Loading applications...</div>
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading your applications...</p>
+        </div>
+      ) : error ? (
+        <div className="error-message">{error}</div>
       ) : applications.length === 0 ? (
-        <div className="bg-gray-50 p-4 rounded-md">
-          <p>You haven't applied to any scholarships yet.</p>
-          <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        <div className="empty-state">
+          <h3>No applications found</h3>
+          {statusFilter ? (
+            <p>You don't have any applications with status "{getStatusLabel(statusFilter)}".</p>
+          ) : (
+            <p>You haven't applied to any scholarships yet.</p>
+          )}
+          <Link to="/scholarships" className="btn btn-primary">
             Browse Scholarships
-          </button>
+          </Link>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="applications-grid">
           {applications.map((application) => (
-            <div key={application.id} className="border rounded-md p-4">
-              <h2 className="text-lg font-semibold">{application.scholarshipName}</h2>
-              <p className="text-gray-600">Applied on: {new Date(application.applyDate).toLocaleDateString()}</p>
-              <p className="mt-2">Status: <span className="font-medium">{application.status}</span></p>
+            <div key={application._id} className="application-card">
+              <div className={`application-status ${getStatusClass(application.status)}`}>
+                {getStatusLabel(application.status)}
+              </div>
+              
+              <h2 className="scholarship-title">
+                {application.scholarship?.title || 'Unnamed Scholarship'}
+              </h2>
+              
+              <div className="application-details">
+                <div className="detail-item">
+                  <span className="label">Amount:</span>
+                  <span className="value">${application.scholarship?.amount.toLocaleString() || 'N/A'}</span>
+                </div>
+                
+                <div className="detail-item">
+                  <span className="label">Applied:</span>
+                  <span className="value">{new Date(application.appliedAt).toLocaleDateString()}</span>
+                </div>
+                
+                <div className="detail-item">
+                  <span className="label">Deadline:</span>
+                  <span className="value">
+                    {application.scholarship?.deadlineDate 
+                      ? new Date(application.scholarship.deadlineDate).toLocaleDateString() 
+                      : 'N/A'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="application-footer">
+                <Link 
+                  to={`/student/applications/${application._id}`} 
+                  className="btn btn-outline"
+                >
+                  View Details
+                </Link>
+              </div>
             </div>
           ))}
         </div>

@@ -88,4 +88,11 @@ router.post(
   authController.changePassword
 );
 
+// Validate token
+router.get(
+  '/validate-token',
+  verifyToken,
+  authController.validateToken
+);
+
 module.exports = router;

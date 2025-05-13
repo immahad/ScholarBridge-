@@ -1,106 +1,202 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FiDollarSign, FiUsers, FiBarChart2, FiFileText, FiCheckCircle, FiArrowRight, FiFilePlus } from 'react-icons/fi';
+import { FiDollarSign, FiUsers, FiBarChart2, FiFileText, FiCheckCircle, FiArrowRight, FiFilePlus, FiPlusCircle, FiClock, FiXCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthUtils';
+import axios from 'axios';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import '../../styles/dashboard.css';
 
 const DonorDashboard = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalDonated: 0,
     studentsHelped: 0,
-    activeScholarships: 0,
-    pendingStudents: 0
+    eligibleStudentsCount: 0,
   });
   const [donations, setDonations] = useState([]);
+  const [scholarships, setScholarships] = useState({
+    pending: [],
+    active: [],
+    rejected: []
+  });
   const [chartData, setChartData] = useState({
     months: [],
     values: []
   });
+  const [welcomeName, setWelcomeName] = useState('Donor');
+  const statsRef = useRef(null);
+  const donationChartRef = useRef(null);
+  const recentDonationsTableRef = useRef(null);
 
   useEffect(() => {
-    // Mock data - in a real app, this would be an API call
-    const fetchDonorData = async () => {
+    const fetchDonorDashboardData = async () => {
+      setLoading(true);
       try {
-        // This would be replaced with actual API calls
-        setTimeout(() => {
-          // Mock stats
-          const mockStats = {
-            totalDonated: 32000,
-            studentsHelped: 12,
-            activeScholarships: 8,
-            pendingStudents: 24
-          };
+        if (user?.id) {
+          const userProfileResponse = await axios.get(`/api/donors/profile`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (userProfileResponse.data.success && userProfileResponse.data.donor) {
+            setWelcomeName(userProfileResponse.data.donor.firstName || 'Donor');
+          }
+        }
+
+        const response = await axios.get('/api/donors/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data.success) {
+          const { donationSummary, recentDonations, monthlyDonations, eligibleStudentsCount } = response.data;
           
-          // Mock donations
-          const mockDonations = [
-            {
-              id: 1,
-              studentName: 'Alex Johnson',
-              program: 'Computer Science',
-              institution: 'Stanford University',
-              amount: 5000,
-              date: '2023-12-10',
-              status: 'active'
-            },
-            {
-              id: 2,
-              studentName: 'Maria Garcia',
-              program: 'Mechanical Engineering',
-              institution: 'MIT',
-              amount: 3500,
-              date: '2023-11-15',
-              status: 'active'
-            },
-            {
-              id: 3,
-              studentName: 'James Wilson',
-              program: 'Chemistry',
-              institution: 'UC Berkeley',
-              amount: 4000,
-              date: '2023-10-22',
-              status: 'completed'
-            },
-            {
-              id: 4,
-              studentName: 'Sarah Chen',
-              program: 'Environmental Science',
-              institution: 'University of Washington',
-              amount: 3000,
-              date: '2023-09-05',
-              status: 'completed'
-            },
-            {
-              id: 5,
-              studentName: 'David Kim',
-              program: 'Business Administration',
-              institution: 'Harvard University',
-              amount: 4500,
-              date: '2023-08-18',
-              status: 'completed'
-            }
-          ];
+          setStats({
+            totalDonated: donationSummary?.totalDonated || 0,
+            studentsHelped: donationSummary?.studentsHelped || 0,
+            eligibleStudentsCount: eligibleStudentsCount || 0,
+          });
           
-          // Mock chart data
-          const mockChartData = {
-            months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            values: [0, 0, 0, 0, 0, 0, 0, 3000, 3000, 4000, 3500, 5000]
-          };
+          setDonations(recentDonations.map(d => ({
+            id: d._id,
+            studentName: `${d.student?.firstName || 'N/A'} ${d.student?.lastName || ''}`.trim(),
+            program: d.student?.program || 'N/A',
+            institution: d.student?.institution || 'N/A',
+            amount: d.amount || 0,
+            date: d.donationDate,
+            scholarshipName: d.scholarship?.title || 'N/A'
+          })));
           
-          setStats(mockStats);
-          setDonations(mockDonations);
-          setChartData(mockChartData);
-          setLoading(false);
-        }, 1000);
+          if (monthlyDonations && monthlyDonations.length > 0) {
+            const months = monthlyDonations.map(md => md.month);
+            const values = monthlyDonations.map(md => md.amount);
+            setChartData({ months, values });
+          } else {
+            const defaultMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const defaultValues = Array(12).fill(0);
+            setChartData({ months: defaultMonths, values: defaultValues });
+          }
+
+        } else {
+          console.error('Failed to fetch donor dashboard data:', response.data.message);
+        }
       } catch (error) {
-        console.error('Error fetching donor data:', error);
+        console.error('Error fetching donor dashboard data:', error.response ? error.response.data : error.message);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchDonorData();
-  }, []);
+    const fetchDonorScholarships = async () => {
+      try {
+        const response = await axios.get('/api/scholarships/donor', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data.success) {
+          setScholarships(response.data.scholarships);
+        } else {
+          console.error('Failed to fetch donor scholarships:', response.data.message);
+        }
+      } catch (error) {
+        console.error('Error fetching donor scholarships:', error.response ? error.response.data : error.message);
+      }
+    };
+
+    if (token) {
+      fetchDonorDashboardData();
+      fetchDonorScholarships();
+    } else {
+      setLoading(false);
+    }
+  }, [token, user?.id]);
+
+  const addImageToPdf = async (pdf, elementRef, yPos) => {
+    if (!elementRef.current) return yPos;
+    const canvas = await html2canvas(elementRef.current, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      scrollY: -window.scrollY
+    });
+    const imgData = canvas.toDataURL('image/png');
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const imgWidth = imgProps.width;
+    const imgHeight = imgProps.height;
+    const ratio = imgWidth / imgHeight;
+    let newImgWidth = pdfWidth - 20;
+    let newImgHeight = newImgWidth / ratio;
+
+    if (yPos + newImgHeight > pdf.internal.pageSize.getHeight() - 10 && yPos > 20) {
+      pdf.addPage();
+      yPos = 15;
+    }
+
+    pdf.addImage(imgData, 'PNG', 10, yPos, newImgWidth, newImgHeight);
+    return yPos + newImgHeight + 10;
+  };
+
+  const handleGenerateDashboardPdf = async () => {
+    try {
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      let yPos = 15;
+
+      const currentDate = new Date().toLocaleDateString();
+      pdf.setFontSize(10);
+      pdf.text(`Report Generated: ${currentDate}`, pdf.internal.pageSize.getWidth() - 10, 10, { align: 'right' });
+      pdf.setFontSize(18);
+      pdf.text('Donor Report', pdf.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
+      yPos += 10;
+
+      if (statsRef.current) {
+        pdf.setFontSize(14);
+        pdf.text('Summary Statistics', 10, yPos);
+        yPos += 7;
+        yPos = await addImageToPdf(pdf, statsRef, yPos);
+      }
+      
+      if (donationChartRef.current) {
+        pdf.setFontSize(14);
+        if (yPos + 10 > pdf.internal.pageSize.getHeight() -10) { pdf.addPage(); yPos = 15; }
+        pdf.text('Donation History', 10, yPos);
+        yPos += 7;
+        yPos = await addImageToPdf(pdf, donationChartRef, yPos);
+      }
+
+      pdf.setFontSize(14);
+      if (yPos + 10 > pdf.internal.pageSize.getHeight() - 10) { pdf.addPage(); yPos = 15; }
+      pdf.text('Recent Donations', 10, yPos);
+      yPos += 7;
+
+      if (donations.length === 0) {
+        pdf.setFontSize(12);
+        pdf.text('No donations yet.', 10, yPos);
+        yPos += 10;
+      } else if (recentDonationsTableRef.current) {
+        yPos = await addImageToPdf(pdf, recentDonationsTableRef, yPos);
+      }
+
+      let donorNameForFile = 'Donor';
+      if (user) {
+        const firstName = user.firstName || '';
+        const lastName = user.lastName || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        if (fullName) {
+          donorNameForFile = fullName.replace(/\s+/g, '_');
+        }
+      }
+      
+      pdf.save(`ScholarBridge-${donorNameForFile}-Donor-Report.pdf`);
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
+  };
 
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -116,14 +212,39 @@ const DonorDashboard = () => {
     }).format(amount);
   };
 
-  // Function to generate a simple SVG bar chart
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'pending_approval': return 'status-pending';
+      case 'active': return 'status-approved';
+      case 'rejected': return 'status-rejected';
+      default: return '';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending_approval': return <FiClock className="status-icon pending" />;
+      case 'active': return <FiCheckCircle className="status-icon approved" />;
+      case 'rejected': return <FiXCircle className="status-icon rejected" />;
+      default: return null;
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'pending_approval': return 'Pending Approval';
+      case 'active': return 'Active';
+      case 'rejected': return 'Rejected';
+      default: return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
   const generateChart = () => {
     const maxValue = Math.max(...chartData.values);
     const barWidth = 100 / chartData.months.length;
     
     return (
-      <div className="donation-chart">
-        <h3 className="chart-title">Donation History</h3>
+      <div className="donation-chart-content">
         <div className="chart-container">
           <svg width="100%" height="200" className="chart">
             {chartData.values.map((value, index) => {
@@ -163,16 +284,23 @@ const DonorDashboard = () => {
     );
   };
 
+  // Get all scholarships combined for display
+  const allScholarships = [
+    ...scholarships.active.map(s => ({ ...s, statusLabel: 'Active' })),
+    ...scholarships.pending.map(s => ({ ...s, statusLabel: 'Pending Approval' })),
+    ...scholarships.rejected.map(s => ({ ...s, statusLabel: 'Rejected' }))
+  ];
+
   return (
     <div className="dashboard-container">
       <h1 className="dashboard-title">Donor Dashboard</h1>
-      <p className="dashboard-welcome">Welcome back, {user?.firstName || 'Donor'}!</p>
+      <p className="dashboard-welcome">Welcome back, {welcomeName}!</p>
       
       {loading ? (
         <div className="loading-spinner">Loading...</div>
       ) : (
         <>
-          <div className="dashboard-stats">
+          <div className="dashboard-stats" ref={statsRef}>
             <div className="stat-card">
               <div className="stat-icon-wrapper blue">
                 <FiDollarSign className="stat-icon" />
@@ -194,35 +322,87 @@ const DonorDashboard = () => {
             </div>
             
             <div className="stat-card">
-              <div className="stat-icon-wrapper purple">
-                <FiCheckCircle className="stat-icon" />
+              <div className="stat-icon-wrapper orange">
+                <FiFileText className="stat-icon" />
               </div>
               <div className="stat-content">
-                <h3 className="stat-value">{stats.activeScholarships}</h3>
-                <p className="stat-label">Active Scholarships</p>
+                <h3 className="stat-value">{stats.eligibleStudentsCount}</h3>
+                <p className="stat-label">Eligible Students</p>
               </div>
             </div>
+          </div>
+
+          {/* My Scholarships Section */}
+          <div className="dashboard-section">
+            <div className="section-header">
+              <h2>My Scholarships</h2>
+              <Link to="/donor/scholarships/create" className="btn btn-primary">
+                <FiPlusCircle className="btn-icon" /> Create New Scholarship
+              </Link>
+            </div>
             
-            <div className="stat-card">
-              <div className="stat-icon-wrapper orange">
-                <FiUsers className="stat-icon" />
-              </div>
-              <div className="stat-content">
-                <h3 className="stat-value">{stats.pendingStudents}</h3>
-                <p className="stat-label">Pending Students</p>
-              </div>
+            <div className="scholarships-list">
+              {allScholarships.length === 0 ? (
+                <div className="empty-state">
+                  <p>You haven't created any scholarships yet.</p>
+                  <Link to="/donor/scholarships/create" className="btn btn-secondary">Create Your First Scholarship</Link>
+                </div>
+              ) : (
+                <div className="scholarship-cards">
+                  {allScholarships.slice(0, 4).map(scholarship => (
+                    <div key={scholarship._id} className="application-card">
+                      <div className="application-header">
+                        <h3>{scholarship.title}</h3>
+                        <div className={`status-badge ${getStatusClass(scholarship.status)}`}>
+                          {getStatusIcon(scholarship.status)}
+                          <span>{getStatusLabel(scholarship.status)}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="application-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Amount:</span>
+                          <span className="detail-value">${scholarship.amount.toLocaleString()}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Deadline:</span>
+                          <span className="detail-value">{formatDate(scholarship.deadlineDate)}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Applicants:</span>
+                          <span className="detail-value">{scholarship.applicantCount || 0}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="application-actions">
+                        <Link to={`/donor/scholarships/${scholarship._id}`} className="btn btn-outline">
+                          View Details
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {allScholarships.length > 4 && (
+                <div className="view-all-link">
+                  <Link to="/donor/scholarships" className="btn btn-link">
+                    View All Scholarships <FiArrowRight className="icon-right" />
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="dashboard-section">
             <div className="section-header">
               <h2>Donation Analytics</h2>
-              <Link to="/donor/reports" className="btn btn-outline">
-                <FiFileText className="btn-icon" /> Generate Report
-              </Link>
+              <button onClick={handleGenerateDashboardPdf} className="btn btn-outline">
+                <FiFileText className="btn-icon" /> Generate Report (PDF)
+              </button>
             </div>
-            
-            {generateChart()}
+            <div ref={donationChartRef}>
+              {generateChart()}
+            </div>
           </div>
 
           <div className="dashboard-section">
@@ -240,16 +420,16 @@ const DonorDashboard = () => {
                   <Link to="/donor/students" className="btn btn-secondary">Browse Students</Link>
                 </div>
               ) : (
-                <div className="table-responsive">
+                <div className="table-responsive" ref={recentDonationsTableRef}>
                   <table className="donations-table">
                     <thead>
                       <tr>
                         <th>Student</th>
                         <th>Program</th>
                         <th>Institution</th>
+                        <th>Scholarship</th>
                         <th>Amount</th>
                         <th>Date</th>
-                        <th>Status</th>
                         <th>Action</th>
                       </tr>
                     </thead>
@@ -259,13 +439,9 @@ const DonorDashboard = () => {
                           <td>{donation.studentName}</td>
                           <td>{donation.program}</td>
                           <td>{donation.institution}</td>
+                          <td>{donation.scholarshipName}</td>
                           <td>{formatCurrency(donation.amount)}</td>
                           <td>{formatDate(donation.date)}</td>
-                          <td>
-                            <span className={`status-pill status-${donation.status}`}>
-                              {donation.status.charAt(0).toUpperCase() + donation.status.slice(1)}
-                            </span>
-                          </td>
                           <td>
                             <Link to={`/donor/donations/${donation.id}`} className="action-link">
                               View <FiArrowRight />
@@ -277,35 +453,6 @@ const DonorDashboard = () => {
                   </table>
                 </div>
               )}
-            </div>
-          </div>
-          
-          <div className="dashboard-section">
-            <div className="section-header">
-              <h2>Impact Summary</h2>
-            </div>
-            
-            <div className="impact-summary">
-              <div className="impact-card">
-                <div className="impact-icon">
-                  <FiBarChart2 />
-                </div>
-                <div className="impact-content">
-                  <h3>Your contributions are making a difference</h3>
-                  <p>Your generosity has helped {stats.studentsHelped} students pursue their educational dreams. For many of these students, your support has been transformative.</p>
-                  <div className="impact-stats">
-                    <div className="impact-stat">
-                      <span className="stat-number">75%</span>
-                      <span className="stat-label">of your supported students are first-generation college students</span>
-                    </div>
-                    <div className="impact-stat">
-                      <span className="stat-number">90%</span>
-                      <span className="stat-label">graduation rate for scholarship recipients</span>
-                    </div>
-                  </div>
-                  <Link to="/donor/impact" className="btn btn-outline">View Full Impact Report</Link>
-                </div>
-              </div>
             </div>
           </div>
         </>

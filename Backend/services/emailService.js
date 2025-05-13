@@ -332,3 +332,86 @@ exports.sendDonationConfirmationEmail = async (payment, donor, scholarship, stud
     html
   });
 };
+
+/**
+ * Send scholarship approved email notification to donor
+ * @param {String} email - Donor email
+ * @param {String} scholarshipTitle - Title of the scholarship
+ * @returns {Promise<Boolean>} - Success status
+ */
+exports.sendScholarshipApprovedEmail = async (email, scholarshipTitle) => {
+  const subject = 'Your Scholarship Has Been Approved';
+  
+  const text = `
+    Congratulations!
+    
+    Your scholarship "${scholarshipTitle}" has been reviewed and approved by our administrators.
+    
+    Your scholarship is now active and visible to students on the platform. You will be notified when students apply for this scholarship.
+    
+    Thank you for contributing to students' education and future.
+    
+    Regards,
+    ScholarBridge Team
+  `;
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Scholarship Approved</h2>
+      <p>Congratulations!</p>
+      <p>Your scholarship "<strong>${scholarshipTitle}</strong>" has been reviewed and approved by our administrators.</p>
+      <p>Your scholarship is now active and visible to students on the platform. You will be notified when students apply for this scholarship.</p>
+      <p>Thank you for contributing to students' education and future.</p>
+      <p>Regards,<br>ScholarBridge Team</p>
+    </div>
+  `;
+  
+  return await sendEmail({
+    to: email,
+    subject,
+    text,
+    html
+  });
+};
+
+/**
+ * Send scholarship rejected email notification to donor
+ * @param {String} email - Donor email
+ * @param {String} scholarshipTitle - Title of the scholarship
+ * @param {String} reason - Reason for rejection
+ * @returns {Promise<Boolean>} - Success status
+ */
+exports.sendScholarshipRejectedEmail = async (email, scholarshipTitle, reason) => {
+  const subject = 'Your Scholarship Requires Revision';
+  
+  const text = `
+    We've reviewed your scholarship "${scholarshipTitle}" and we need some changes before it can be approved.
+    
+    Reason: ${reason || 'No specific reason provided. Please contact support for more details.'}
+    
+    You can edit and resubmit your scholarship from your dashboard.
+    
+    If you need any assistance, please don't hesitate to contact our support team.
+    
+    Regards,
+    ScholarBridge Team
+  `;
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Scholarship Review Results</h2>
+      <p>We've reviewed your scholarship "<strong>${scholarshipTitle}</strong>" and we need some changes before it can be approved.</p>
+      <p><strong>Reason:</strong> ${reason || 'No specific reason provided. Please contact support for more details.'}</p>
+      <p>You can edit and resubmit your scholarship from your dashboard.</p>
+      <p>If you need any assistance, please don't hesitate to contact our support team.</p>
+      <p>Regards,<br>ScholarBridge Team</p>
+    </div>
+  `;
+  
+  return await sendEmail({
+    to: email,
+    subject,
+    text,
+    html
+  });
+};

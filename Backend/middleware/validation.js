@@ -82,6 +82,11 @@ const schemas = {
         }),
         otherwise: Joi.number().optional()
       }),
+      currentGPA: Joi.number().min(0).max(4).allow(null).optional().default(null).messages({
+        'number.base': 'GPA must be a number if provided.',
+        'number.min': 'GPA cannot be negative if provided.',
+        'number.max': 'GPA cannot be greater than 4 if provided.'
+      }),
       // Donor fields
       donorType: Joi.alternatives().conditional('role', {
         is: 'donor',
@@ -96,7 +101,7 @@ const schemas = {
         then: Joi.string().required().messages({
           'any.required': 'Organization name is required'
         }),
-        otherwise: Joi.string().optional()
+        otherwise: Joi.string().allow('').optional()
       })
     }),
     
@@ -169,6 +174,11 @@ const schemas = {
         'number.base': 'Expected graduation year must be a number',
         'number.min': 'Expected graduation year must be in the future'
       }),
+      currentGPA: Joi.number().min(0).max(4).allow(null).optional().default(null).messages({
+        'number.base': 'GPA must be a number if provided.',
+        'number.min': 'GPA cannot be negative if provided.',
+        'number.max': 'GPA cannot be greater than 4 if provided.'
+      }),
       address: Joi.object({
         street: Joi.string().required().messages({
           'any.required': 'Street address is required'
@@ -187,15 +197,18 @@ const schemas = {
         })
       }).optional(),
       financialInfo: Joi.object({
-        familyIncome: Joi.number().positive().required().messages({
-          'any.required': 'Family income is required',
-          'number.base': 'Family income must be a number',
-          'number.positive': 'Family income must be positive'
+        familyIncome: Joi.number().positive().empty(null).optional().default(null).messages({
+          'number.base': 'Family income must be a number if provided.',
+          'number.positive': 'Family income must be positive if provided.'
         }),
-        dependentFamilyMembers: Joi.number().integer().min(0).required().messages({
-          'any.required': 'Number of dependent family members is required',
-          'number.base': 'Dependent family members must be a number',
-          'number.min': 'Dependent family members cannot be negative'
+        dependentFamilyMembers: Joi.number().integer().min(0).empty(null).optional().default(null).messages({
+          'number.base': 'Dependent family members must be a number if provided.',
+          'number.min': 'Dependent family members cannot be negative if provided.'
+        }),
+        fafsaCompleted: Joi.boolean().allow(null).optional().default(false),
+        externalAidAmount: Joi.number().min(0).allow(null).optional().default(0).messages({
+          'number.base': 'External aid amount must be a number if provided.',
+          'number.min': 'External aid amount cannot be negative if provided.'
         })
       }).optional()
     }),
@@ -208,21 +221,20 @@ const schemas = {
           'number.min': 'GPA cannot be negative',
           'number.max': 'GPA cannot exceed 4.0'
         }),
-        transcriptUrl: Joi.string().uri().required().messages({
-          'any.required': 'Transcript URL is required',
-          'string.uri': 'Transcript URL must be a valid URI'
+        transcriptUrl: Joi.string().required().messages({
+          'any.required': 'Transcript URL is required'
         })
       }).required(),
-      statement: Joi.string().min(100).max(2000).required().messages({
+      statement: Joi.string().min(10).max(2000).required().messages({
         'any.required': 'Personal statement is required',
-        'string.min': 'Personal statement must be at least 100 characters',
+        'string.min': 'Personal statement must be at least 10 characters',
         'string.max': 'Personal statement cannot exceed 2000 characters'
       }),
       documents: Joi.array().items(
         Joi.object({
           type: Joi.string().valid('transcript', 'recommendation', 'financial', 'other').required(),
-          url: Joi.string().uri().required().messages({
-            'string.uri': 'Document URL must be a valid URI'
+          url: Joi.string().required().messages({
+            'string.empty': 'Document URL must not be empty'
           }),
           name: Joi.string().required()
         })
@@ -249,8 +261,9 @@ const schemas = {
         then: Joi.string().required().messages({
           'any.required': 'Organization name is required'
         }),
-        otherwise: Joi.string().optional()
+        otherwise: Joi.string().allow('').optional()
       }),
+      bio: Joi.string().trim().allow('').optional(),
       taxId: Joi.string().optional(),
       address: Joi.object({
         street: Joi.string().required().messages({
@@ -350,7 +363,17 @@ const schemas = {
       note: Joi.string().max(500).optional().messages({
         'string.max': 'Note cannot exceed 500 characters'
       })
-    })
+    }),
+
+    createScholarship: Joi.object({
+      name: Joi.string().min(2).max(100),
+      title: Joi.string().min(2).max(100),
+      description: Joi.string().required(),
+      amount: Joi.number().required(),
+      deadline: Joi.date().required(),
+      category: Joi.string().required(),
+      eligibilityRequirements: Joi.string().min(1).required(), // case-sensitive
+    }).or('name', 'title') // At least one of name or title is required
   },
   
   // Add admin validation schemas
@@ -435,6 +458,24 @@ const schemas = {
         'any.required': 'Phone number is required'
       }),
       isActive: Joi.boolean().default(true).optional()
+    }),
+
+    reviewApplication: Joi.object({
+      status: Joi.string().valid('approved', 'rejected').required().messages({
+        'any.required': 'Status is required',
+        'any.only': 'Status must be either approved or rejected'
+      }),
+      reason: Joi.string().when('status', {
+        is: 'rejected',
+        then: Joi.string().required().messages({
+          'any.required': 'Reason is required when rejecting an application'
+        }),
+        otherwise: Joi.string().allow('').optional()
+      })
+    }),
+
+    reviewScholarship: Joi.object({
+      // ... existing code ...
     })
   },
   

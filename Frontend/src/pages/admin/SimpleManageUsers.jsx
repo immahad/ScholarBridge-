@@ -13,8 +13,14 @@ import {
   FiFilter
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import { adminService } from '../../services/api';
+import { useAuth } from '../../context/AuthUtils';
+import axios from 'axios';
 
 const StudentStatusPill = ({ status }) => {
+  // Add a default status if undefined
+  const safeStatus = status || 'pending';
+  
   const statusConfig = {
     pending: { 
       bg: 'bg-blue-100', 
@@ -42,12 +48,12 @@ const StudentStatusPill = ({ status }) => {
     }
   };
 
-  const config = statusConfig[status] || statusConfig.pending;
+  const config = statusConfig[safeStatus] || statusConfig.pending;
   
   return (
     <span className={`flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${config.bg} ${config.text} border ${config.borderColor} shadow-sm`}>
       {config.icon}
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
     </span>
   );
 };
@@ -215,6 +221,7 @@ const SimpleManageUsers = () => {
   }, []);
 
   // State management
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('students');
   const [students, setStudents] = useState([]);
   const [donors, setDonors] = useState([]);
@@ -223,6 +230,7 @@ const SimpleManageUsers = () => {
   const [applicationStatusFilter, setApplicationStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
   const [stats, setStats] = useState({
     totalStudents: 0,
     pendingStudents: 0,
@@ -246,315 +254,70 @@ const SimpleManageUsers = () => {
       try {
         setLoading(true);
         
-        // Fallback to mock data for development
-        const mockStudents = [
-          {
-            _id: '1',
-            firstName: 'John',
-            lastName: 'Smith',
-            email: 'john.smith@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-01-15',
-            school: 'University of Technology',
-            graduationYear: 2024,
-            applicationStatus: 'pending'
-          },
-          {
-            _id: '2',
-            firstName: 'Sarah',
-            lastName: 'Johnson',
-            email: 'sarah.johnson@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-02-20',
-            school: 'State University',
-            graduationYear: 2025,
-            applicationStatus: 'approved'
-          },
-          {
-            _id: '4',
-            firstName: 'Maria',
-            lastName: 'Garcia',
-            email: 'maria.garcia@example.com',
-            isActive: false,
-            isVerified: true,
-            createdAt: '2023-01-10',
-            school: 'City College',
-            graduationYear: 2023,
-            applicationStatus: 'rejected'
-          },
-          {
-            _id: '8',
-            firstName: 'David',
-            lastName: 'Wilson',
-            email: 'david.wilson@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-06-15',
-            school: 'Tech Institute',
-            graduationYear: 2024,
-            applicationStatus: 'funded'
-          },
-          {
-            _id: '9',
-            firstName: 'Jennifer',
-            lastName: 'Brown',
-            email: 'jennifer.brown@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-07-05',
-            school: 'State University',
-            graduationYear: 2026,
-            applicationStatus: 'pending'
-          },
-          {
-            _id: '10',
-            firstName: 'Michael',
-            lastName: 'Miller',
-            email: 'michael.miller@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-07-10',
-            school: 'Tech Institute',
-            graduationYear: 2025,
-            applicationStatus: 'approved'
-          },
-          {
-            _id: '11',
-            firstName: 'Emily',
-            lastName: 'Jones',
-            email: 'emily.jones@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-07-20',
-            school: 'City College',
-            graduationYear: 2024,
-            applicationStatus: 'pending'
-          },
-          {
-            _id: '12',
-            firstName: 'James',
-            lastName: 'Taylor',
-            email: 'james.taylor@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-08-01',
-            school: 'University of Technology',
-            graduationYear: 2025,
-            applicationStatus: 'rejected'
-          },
-          {
-            _id: '13',
-            firstName: 'Sophia',
-            lastName: 'Anderson',
-            email: 'sophia.anderson@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-08-15',
-            school: 'State University',
-            graduationYear: 2024,
-            applicationStatus: 'approved'
-          },
-          {
-            _id: '14',
-            firstName: 'William',
-            lastName: 'Thomas',
-            email: 'william.thomas@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-09-01',
-            school: 'Tech Institute',
-            graduationYear: 2026,
-            applicationStatus: 'funded'
-          },
-          {
-            _id: '15',
-            firstName: 'Olivia',
-            lastName: 'Jackson',
-            email: 'olivia.jackson@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-09-10',
-            school: 'City College',
-            graduationYear: 2025,
-            applicationStatus: 'pending'
-          },
-          {
-            _id: '16',
-            firstName: 'Ethan',
-            lastName: 'White',
-            email: 'ethan.white@example.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-10-05',
-            school: 'University of Technology',
-            graduationYear: 2024,
-            applicationStatus: 'approved'
-          }
-        ];
-        
-        const mockDonors = [
-          {
-            _id: '3',
-            firstName: 'XYZ',
-            lastName: 'Foundation',
-            email: 'contact@xyzfoundation.org',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-03-05',
-            organizationName: 'XYZ Foundation',
-            donationsMade: 12,
-            totalDonated: 75000
-          },
-          {
-            _id: '5',
-            firstName: 'ABC',
-            lastName: 'Corporation',
-            email: 'scholarships@abccorp.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-04-12',
-            organizationName: 'ABC Corporation',
-            donationsMade: 8,
-            totalDonated: 45000
-          },
-          {
-            _id: '7',
-            firstName: 'Community',
-            lastName: 'Trust',
-            email: 'info@communitytrust.org',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-05-01',
-            organizationName: 'Community Trust',
-            donationsMade: 5,
-            totalDonated: 30000
-          },
-          {
-            _id: '17',
-            firstName: 'National',
-            lastName: 'Scholarship Fund',
-            email: 'info@nationalscholarship.org',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-06-15',
-            organizationName: 'National Scholarship Fund',
-            donationsMade: 20,
-            totalDonated: 120000
-          },
-          {
-            _id: '18',
-            firstName: 'Global',
-            lastName: 'Education Initiative',
-            email: 'contact@globaleducation.org',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-07-20',
-            organizationName: 'Global Education Initiative',
-            donationsMade: 15,
-            totalDonated: 90000
-          },
-          {
-            _id: '19',
-            firstName: 'Tech',
-            lastName: 'Futures',
-            email: 'scholarships@techfutures.com',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-08-10',
-            organizationName: 'Tech Futures Inc.',
-            donationsMade: 10,
-            totalDonated: 60000
-          },
-          {
-            _id: '20',
-            firstName: 'Bright',
-            lastName: 'Horizons Foundation',
-            email: 'grants@brighthorizons.org',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-09-05',
-            organizationName: 'Bright Horizons Foundation',
-            donationsMade: 7,
-            totalDonated: 40000
-          },
-          {
-            _id: '21',
-            firstName: 'Future',
-            lastName: 'Leaders Fund',
-            email: 'info@futureleaders.org',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-10-01',
-            organizationName: 'Future Leaders Fund',
-            donationsMade: 9,
-            totalDonated: 55000
-          },
-          {
-            _id: '22',
-            firstName: 'City',
-            lastName: 'Educational Trust',
-            email: 'contact@cityeducation.org',
-            isActive: false,
-            isVerified: true,
-            createdAt: '2023-10-15',
-            organizationName: 'City Educational Trust',
-            donationsMade: 3,
-            totalDonated: 25000
-          },
-          {
-            _id: '23',
-            firstName: 'Innovation',
-            lastName: 'Scholars',
-            email: 'grants@innovationscholars.org',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-11-05',
-            organizationName: 'Innovation Scholars Program',
-            donationsMade: 6,
-            totalDonated: 35000
-          },
-          {
-            _id: '24',
-            firstName: 'Tomorrow\'s',
-            lastName: 'Leaders',
-            email: 'info@tomorrowsleaders.org',
-            isActive: true,
-            isVerified: true,
-            createdAt: '2023-11-20',
-            organizationName: 'Tomorrow\'s Leaders Organization',
-            donationsMade: 4,
-            totalDonated: 28000
-          }
-        ];
-        
-        const mockStats = {
-          totalStudents: mockStudents.length,
-          pendingStudents: mockStudents.filter(s => s.applicationStatus === 'pending').length,
-          approvedStudents: mockStudents.filter(s => s.applicationStatus === 'approved').length,
-          rejectedStudents: mockStudents.filter(s => s.applicationStatus === 'rejected').length,
-          fundedStudents: mockStudents.filter(s => s.applicationStatus === 'funded').length,
-          totalDonors: mockDonors.length,
-          activeDonors: mockDonors.filter(d => d.isActive).length,
-          totalDonations: mockDonors.reduce((sum, donor) => sum + donor.totalDonated, 0)
+        // Fetch real users from the API
+        const params = {
+          page: currentPage,
+          limit: usersPerPage,
+          role: activeTab === 'students' ? 'student' : activeTab === 'donors' ? 'donor' : undefined
         };
         
-        setStudents(mockStudents);
-        setDonors(mockDonors);
-        setStats(mockStats);
+        if (searchTerm) {
+          params.search = searchTerm;
+        }
+        
+        if (activeTab === 'students' && applicationStatusFilter !== 'all') {
+          params.applicationStatus = applicationStatusFilter;
+        }
+
+        console.log('Fetching users with params:', params);
+        const response = await axios.get('/api/admin/users', {
+          params,
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        console.log('Users API response:', response.data);
+        
+        if (response.data) {
+          // Extract user data
+          const userData = response.data;
+          
+          // Set users based on active tab
+          if (activeTab === 'students') {
+            setStudents(userData.users?.filter(user => user?.role === 'student') || []);
+          } else if (activeTab === 'donors') {
+            setDonors(userData.users?.filter(user => user?.role === 'donor') || []);
+          }
+          
+          // Set statistics
+          if (userData.statistics) {
+            setStats(userData.statistics);
+          }
+          
+          // Set pagination info
+          if (userData.totalPages) {
+            setTotalPages(userData.totalPages);
+          } else if (userData.total && usersPerPage) {
+            setTotalPages(Math.ceil(userData.total / usersPerPage));
+          }
+        } else {
+          toast.error('Received invalid data format from server');
+        }
       } catch (error) {
-        console.error('Error fetching users:', error);
-        toast.error('Failed to load users. Please try again.');
+        console.error('Error fetching users data:', error);
+        toast.error(error.response?.data?.message || 'Failed to load users data. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchUsersData();
-  }, []);
-  
-  // Delete user function
+  }, [activeTab, currentPage, usersPerPage, token, searchTerm, applicationStatusFilter]);
+
+  // Add a debounced search handler
+  useEffect(() => {
+    setCurrentPage(1); // Reset to page 1 when search or filters change
+  }, [searchTerm, applicationStatusFilter, activeTab]);
+
   const handleDeleteUser = async (userId, userName, userRole) => {
     setDeleteModal({
       isOpen: true,
@@ -563,56 +326,29 @@ const SimpleManageUsers = () => {
       userRole
     });
   };
-  
+
   const confirmDeleteUser = async () => {
     try {
       const { userId, userRole } = deleteModal;
       
-      // Update local state based on role
+      // Call API to delete the user
+      await adminService.deleteUser(userId);
+      
+      // Update the UI to reflect the deletion
       if (userRole === 'student') {
-        setStudents(students.filter(student => student._id !== userId));
-        
-        // Update stats
-        setStats(prev => ({
-          ...prev,
-          totalStudents: prev.totalStudents - 1,
-          pendingStudents: students.find(s => s._id === userId && s.applicationStatus === 'pending') ? prev.pendingStudents - 1 : prev.pendingStudents,
-          approvedStudents: students.find(s => s._id === userId && s.applicationStatus === 'approved') ? prev.approvedStudents - 1 : prev.approvedStudents,
-          rejectedStudents: students.find(s => s._id === userId && s.applicationStatus === 'rejected') ? prev.rejectedStudents - 1 : prev.rejectedStudents,
-          fundedStudents: students.find(s => s._id === userId && s.applicationStatus === 'funded') ? prev.fundedStudents - 1 : prev.fundedStudents
-        }));
+        setStudents(prevStudents => prevStudents.filter(student => student._id !== userId));
       } else if (userRole === 'donor') {
-        const donorToDelete = donors.find(d => d._id === userId);
-        setDonors(donors.filter(donor => donor._id !== userId));
-        
-        // Update stats
-        if (donorToDelete) {
-          setStats(prev => ({
-            ...prev,
-            totalDonors: prev.totalDonors - 1,
-            activeDonors: donorToDelete.isActive ? prev.activeDonors - 1 : prev.activeDonors,
-            totalDonations: prev.totalDonations - donorToDelete.totalDonated
-          }));
-        }
+        setDonors(prevDonors => prevDonors.filter(donor => donor._id !== userId));
       }
       
-      toast.success('User successfully deleted', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      });
+      toast.success('User deleted successfully!');
       closeDeleteModal();
-      
     } catch (error) {
       console.error('Error deleting user:', error);
       toast.error('Failed to delete user. Please try again.');
     }
   };
-  
+
   const closeDeleteModal = () => {
     setDeleteModal({
       isOpen: false,
@@ -621,82 +357,69 @@ const SimpleManageUsers = () => {
       userRole: ''
     });
   };
-  
-  // Toggle user active status
+
   const handleStatusToggle = async (userId, isCurrentlyActive, userRole) => {
     try {
-      // Update local state based on role
-      if (userRole === 'student') {
-        setStudents(students.map(student => {
-          if (student._id === userId) {
-            return { ...student, isActive: !isCurrentlyActive };
-          }
-          return student;
-        }));
-      } else if (userRole === 'donor') {
-        setDonors(donors.map(donor => {
-          if (donor._id === userId) {
-            return { ...donor, isActive: !isCurrentlyActive };
-          }
-          return donor;
-        }));
-        
-        // Update activeDonors stat
-        setStats(prev => ({
-          ...prev,
-          activeDonors: isCurrentlyActive 
-            ? prev.activeDonors - 1 
-            : prev.activeDonors + 1
-        }));
+      // Call the appropriate API endpoint to activate or deactivate the user
+      if (isCurrentlyActive) {
+        await adminService.deactivateUser(userId);
+      } else {
+        await adminService.activateUser(userId);
       }
       
-      toast.success(`User ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully`, {
-        position: "top-right",
-        autoClose: 2000
-      });
+      // Update state to reflect the change
+      const updateUserStatus = (userArray) => {
+        return userArray.map(user => {
+          if (user._id === userId) {
+            return { ...user, isActive: !isCurrentlyActive };
+          }
+          return user;
+        });
+      };
       
+      if (userRole === 'student') {
+        setStudents(prev => updateUserStatus(prev));
+      } else if (userRole === 'donor') {
+        setDonors(prev => updateUserStatus(prev));
+      }
+      
+      const action = isCurrentlyActive ? 'deactivated' : 'activated';
+      toast.success(`User ${action} successfully!`);
     } catch (error) {
-      console.error('Error toggling user status:', error);
-      toast.error('Failed to update user status. Please try again.');
+      console.error(`Error ${isCurrentlyActive ? 'deactivating' : 'activating'} user:`, error);
+      toast.error(`Failed to update user status. Please try again.`);
     }
   };
-  
-  // Filter students based on search term and application status
-  const filteredStudents = students.filter(student => {
-    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
-    const matchesSearch = 
-      fullName.includes(searchTerm.toLowerCase()) || 
-      student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (student.school && student.school.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = applicationStatusFilter === 'all' || student.applicationStatus === applicationStatusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
-  
-  // Filter donors based on search term
-  const filteredDonors = donors.filter(donor => {
-    const fullName = `${donor.firstName} ${donor.lastName}`.toLowerCase();
-    const matchesSearch = 
-      fullName.includes(searchTerm.toLowerCase()) || 
-      donor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (donor.organizationName && donor.organizationName.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  // Filter users based on search and status criteria
+  const getFilteredStudents = () => {
+    return students.filter(student => {
+      const fullName = `${student.firstName || ''} ${student.lastName || ''}`.toLowerCase();
+      const emailMatch = (student.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const nameMatch = fullName.includes(searchTerm.toLowerCase());
+      const schoolMatch = (student.school || '').toLowerCase().includes(searchTerm.toLowerCase());
       
-    return matchesSearch;
-  });
-  
+      const matchesSearch = searchTerm === '' || emailMatch || nameMatch || schoolMatch;
+      
+      const matchesStatus = applicationStatusFilter === 'all' || 
+                            (student.applicationStatus === applicationStatusFilter);
+      
+      return matchesSearch && matchesStatus;
+    });
+  };
+
+  const getFilteredDonors = () => {
+    return donors.filter(donor => {
+      const fullName = `${donor.firstName || ''} ${donor.lastName || ''}`.toLowerCase();
+      const emailMatch = (donor.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const nameMatch = fullName.includes(searchTerm.toLowerCase());
+      const orgMatch = (donor.organizationName || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return searchTerm === '' || emailMatch || nameMatch || orgMatch;
+    });
+  };
+
   // Pagination logic
-  const indexOfLastItem = currentPage * usersPerPage;
-  const indexOfFirstItem = indexOfLastItem - usersPerPage;
-  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
-  const currentDonors = filteredDonors.slice(indexOfFirstItem, indexOfLastItem);
-  
-  // Calculate total pages
-  const totalStudentPages = Math.ceil(filteredStudents.length / usersPerPage);
-  const totalDonorPages = Math.ceil(filteredDonors.length / usersPerPage);
-  const totalPages = activeTab === 'students' ? totalStudentPages : totalDonorPages;
-  
-  // Pagination navigation functions
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
   
   const goToPreviousPage = () => {
@@ -710,11 +433,6 @@ const SimpleManageUsers = () => {
       setCurrentPage(currentPage + 1);
     }
   };
-  
-  // Reset to page 1 when changing tabs or filters
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, searchTerm, applicationStatusFilter]);
   
   return (
     <div className="min-h-screen bg-gray-50 transition-colors duration-300">
@@ -900,7 +618,7 @@ const SimpleManageUsers = () => {
           </div>
         ) : activeTab === 'students' ? (
           // Students Table
-          filteredStudents.length === 0 ? (
+          getFilteredStudents().length === 0 ? (
             <div className="bg-white p-8 rounded-xl text-center shadow-sm animate-fadeIn">
               <FiAlertTriangle className="mx-auto text-blue-500 mb-3" size={40} />
               <p className="text-gray-700 font-medium">No students found matching your criteria.</p>
@@ -929,7 +647,7 @@ const SimpleManageUsers = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {currentStudents.map((student, index) => (
+                    {getFilteredStudents().map((student, index) => (
                       <tr 
                         key={student._id} 
                         className={`transition-colors duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}`}
@@ -992,7 +710,7 @@ const SimpleManageUsers = () => {
           )
         ) : (
           // Donors Table
-          filteredDonors.length === 0 ? (
+          getFilteredDonors().length === 0 ? (
             <div className="bg-white p-8 rounded-xl text-center shadow-sm animate-fadeIn">
               <FiAlertTriangle className="mx-auto text-green-500 mb-3" size={40} />
               <p className="text-gray-700 font-medium">No donors found matching your criteria.</p>
@@ -1019,7 +737,7 @@ const SimpleManageUsers = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {currentDonors.map((donor, index) => (
+                    {getFilteredDonors().map((donor, index) => (
                       <tr 
                         key={donor._id} 
                         className={`transition-colors duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-green-50/30'}`}
@@ -1088,8 +806,8 @@ const SimpleManageUsers = () => {
         )}
         
         {/* Pagination Controls - moved to right, styled green and fixed size */}
-        {(activeTab === 'students' && filteredStudents.length > 0) || 
-         (activeTab === 'donors' && filteredDonors.length > 0) ? (
+        {(activeTab === 'students' && getFilteredStudents().length > 0) || 
+         (activeTab === 'donors' && getFilteredDonors().length > 0) ? (
           <div className="mt-6">
             <div className="w-full flex justify-end">
               <div className="flex items-center bg-white p-4 rounded-xl shadow-sm">
@@ -1138,7 +856,7 @@ const SimpleManageUsers = () => {
               </div>
             </div>
             <div className="mt-2 pr-4 text-right text-sm text-gray-700">
-              Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, (activeTab === 'students' ? filteredStudents.length : filteredDonors.length))}</span> of <span className="font-medium">{activeTab === 'students' ? filteredStudents.length : filteredDonors.length}</span> results
+              Showing <span className="font-medium">{getFilteredStudents().length > 0 ? getFilteredStudents().length : getFilteredDonors().length}</span> of <span className="font-medium">{activeTab === 'students' ? getFilteredStudents().length : getFilteredDonors().length}</span> results
             </div>
           </div>
         ) : null}

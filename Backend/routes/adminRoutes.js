@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const adminDashboardController = require('../controllers/adminDashboardController');
 const { verifyToken } = require('../middleware/auth');
 const { isAdmin, hasAdminPermission } = require('../middleware/roleCheck');
 
@@ -8,7 +9,7 @@ const { isAdmin, hasAdminPermission } = require('../middleware/roleCheck');
 router.use(verifyToken, isAdmin);
 
 // Get admin dashboard data
-router.get('/dashboard', adminController.getDashboard);
+router.get('/dashboard', adminDashboardController.getDashboard);
 
 // Get all users
 router.get('/users', adminController.getAllUsers);
@@ -43,5 +44,26 @@ router.post(
 
 // Get admin activity log
 router.get('/activity-log', adminController.getActivityLog);
+
+// Get all students with pagination and filters
+router.get('/students', adminController.getAllStudents);
+
+// Get student by ID
+router.get('/students/:id', adminController.getStudentById);
+
+// Create new scholarship
+router.post('/scholarships', adminController.createScholarship);
+
+// Get all scholarships (including created by donors)
+router.get('/scholarships', adminController.getAllScholarships);
+
+// Get scholarship by ID (admin view - important for viewing pending scholarships)
+router.get('/scholarships/:id', adminController.getScholarshipById);
+
+// Delete scholarship
+router.delete('/scholarships/:id', adminController.deleteScholarship);
+
+// Scholarship approval route
+router.put('/scholarships/:id/review', adminController.reviewScholarship);
 
 module.exports = router;

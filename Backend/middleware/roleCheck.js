@@ -30,9 +30,22 @@ const roleCheck = (roles) => {
 /**
  * Specific role check middlewares for convenience
  */
-const isAdmin = roleCheck('admin');
+const isAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied. Admins only.' });
+  }
+  next();
+};
+
 const isStudent = roleCheck('student');
-const isDonor = roleCheck('donor');
+
+const isDonor = (req, res, next) => {
+  if (!req.user || req.user.role !== 'donor') {
+    return res.status(403).json({ message: 'Access denied. Donors only.' });
+  }
+  next();
+};
+
 const isAdminOrDonor = roleCheck(['admin', 'donor']);
 const isAnyUser = roleCheck(['admin', 'student', 'donor']);
 
@@ -61,6 +74,55 @@ const isOwnResource = (paramIdField = 'id') => {
     }
     
     next();
+  };
+};
+
+/**
+ * Middleware to check if user is a donor with access to a scholarship
+ * Allows access if:
+ * 1. User is an admin
+ * 2. User is the donor who created the scholarship
+ * 
+ * @returns {Function} Express middleware
+ */
+const isDonorOrOwner = () => {
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      // Admin can access any scholarship
+      if (req.user.role === 'admin') {
+        return next();
+      }
+      
+      // For donor role, check if they own the scholarship
+      if (req.user.role === 'donor') {
+        const scholarshipId = req.params.id;
+        if (!scholarshipId) {
+          return res.status(400).json({ message: 'Scholarship ID is required' });
+        }
+        
+        const Scholarship = require('../models/Scholarship');
+        const scholarship = await Scholarship.findById(scholarshipId);
+        
+        if (!scholarship) {
+          return res.status(404).json({ message: 'Scholarship not found' });
+        }
+        
+        // Check if the logged-in donor is the creator of the scholarship
+        if (scholarship.createdBy && scholarship.createdBy.toString() === req.user._id.toString()) {
+          return next();
+        }
+      }
+      
+      // If we get here, the user doesn't have permission
+      return res.status(403).json({ message: 'Access denied. You do not have permission to view this scholarship.' });
+    } catch (error) {
+      console.error('Error in isDonorOrOwner middleware:', error);
+      return res.status(500).json({ message: 'Server error checking permissions' });
+    }
   };
 };
 
@@ -102,5 +164,6 @@ module.exports = {
   isAdminOrDonor,
   isAnyUser,
   isOwnResource,
+  isDonorOrOwner,
   hasAdminPermission
-}; 
+};
