@@ -342,10 +342,16 @@ const AdminReports = () => {
   };
 
   const prepareDonationMonthlyData = (data) => {
-    if (!data?.summary?.monthlyTotals) return [];
-    return data.summary.monthlyTotals.map(item => ({
+    // Check if we have data in either the new or old format
+    const monthlyData = data?.summary?.monthlyTotals || 
+                        data?.details?.monthlyTrends || 
+                        [];
+    
+    if (!monthlyData.length) return [];
+    
+    return monthlyData.map(item => ({
       name: `${item.month}/${item.year}`,
-      amount: item.total || 0,
+      amount: item.total || item.totalAmount || 0,
       count: item.count || 0
     }));
   };

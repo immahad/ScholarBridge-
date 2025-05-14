@@ -46,7 +46,6 @@ exports.getActivityLog = profileController.getActivityLog;
 
 // Re-export payment functions
 exports.getAllPayments = paymentController.getAllPayments;
-exports.generateReport = paymentController.generateReport;
 
 /**
  * Get all scholarships

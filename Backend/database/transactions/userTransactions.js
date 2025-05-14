@@ -41,25 +41,62 @@ const createUserWithProfile = async (userData, profileData = {}) => {
         throw new Error(`Invalid user role: ${role}`);
     }
     
-    // Create user with profile data
-    const mergedData = { ...userData, ...profileData };
-    console.log('Creating user with merged data:', JSON.stringify({ ...mergedData, password: '[REDACTED]' }, null, 2));
-    
-    // Create user within the transaction
-    const [user] = await UserModel.create([mergedData], { session });
-    console.log('User created successfully with ID:', user._id);
-    
-    // If user is an admin, create initial admin log
-    if (role === 'admin') {
-      await user.logActivity('profile_created', { 
-        timestamp: new Date() 
-      }, null, session);
+    // Special handling for donor role due to userId requirement
+    if (role === 'donor') {
+      // First create a base User document to get an ID
+      const baseUser = new User({
+        email: userData.email,
+        password: userData.password,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        role: 'donor',
+        phoneNumber: userData.phoneNumber,
+        isActive: userData.isActive,
+        isVerified: userData.isVerified
+      });
+      
+      await baseUser.save({ session });
+      console.log('Base user created with ID:', baseUser._id);
+      
+      // Now create the Donor document with the userId
+      const mergedDonorData = { 
+        ...profileData,
+        userId: baseUser._id,
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        phoneNumber: userData.phoneNumber
+      };
+      
+      console.log('Creating donor with data:', JSON.stringify({ ...mergedDonorData, password: '[REDACTED]' }, null, 2));
+      const [donor] = await Donor.create([mergedDonorData], { session });
+      console.log('Donor created successfully with ID:', donor._id);
+      
+      // Commit the transaction
+      await session.commitTransaction();
+      return baseUser; // Return the base user
+    } 
+    else {
+      // For non-donor roles, continue with the original approach
+      const mergedData = { ...userData, ...profileData };
+      console.log('Creating user with merged data:', JSON.stringify({ ...mergedData, password: '[REDACTED]' }, null, 2));
+      
+      // Create user within the transaction
+      const [user] = await UserModel.create([mergedData], { session });
+      console.log('User created successfully with ID:', user._id);
+      
+      // If user is an admin, create initial admin log
+      if (role === 'admin') {
+        await user.logActivity('profile_created', { 
+          timestamp: new Date() 
+        }, null, session);
+      }
+      
+      // Commit the transaction
+      await session.commitTransaction();
+      
+      return user;
     }
-    
-    // Commit the transaction
-    await session.commitTransaction();
-    
-    return user;
   } catch (error) {
     // Abort transaction on error
     await session.abortTransaction();
@@ -116,6 +153,31 @@ const updateUserWithProfile = async (userId, userData, profileData = {}) => {
       mergedData,
       { new: true, session }
     );
+    
+    // For donor users, ensure the userId reference is maintained correctly
+    if (user.role === 'donor') {
+      console.log('Maintaining explicit link between User and Donor records during update');
+      
+      // Check if the Donor record has the correct userId
+      const donor = await Donor.findById(userId).session(session);
+      
+      if (donor && (!donor.userId || donor.userId.toString() !== userId.toString())) {
+        console.log('Fixing donor-user link during update:', {
+          donorId: donor._id.toString(),
+          currentUserId: donor.userId ? donor.userId.toString() : 'undefined',
+          shouldBeUserId: userId.toString()
+        });
+        
+        // Only update the userId field, nothing else
+        await Donor.findByIdAndUpdate(
+          userId,
+          { userId: userId },
+          { session }
+        );
+        
+        console.log('Donor-User link fixed, userId updated to:', userId.toString());
+      }
+    }
     
     // If user is an admin, log activity
     if (user.role === 'admin') {

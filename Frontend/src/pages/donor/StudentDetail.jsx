@@ -79,7 +79,8 @@ const StudentDetail = () => {
       studentId
     });
     
-    navigate(`/donor/fund-scholarship/${validScholarshipId}/${studentId}`);
+    // Redirect to the general donation form page
+    navigate('/donor/payment');
   };
   
   if (loading) {
