@@ -325,6 +325,86 @@ exports.reviewApplication = asyncHandler(async (req, res) => {
     
     await student.save();
     
+    // IMPORTANT: Also update the application in the Application collection
+    // This ensures the MongoDB trigger will fire
+    const Application = mongoose.model('Application');
+    const application = await Application.findOneAndUpdate(
+      { studentId, scholarshipId },
+      { 
+        $set: { 
+          status: status, 
+          reviewedBy: req.user?._id,
+          reviewedAt: new Date(),
+          ...(status === 'rejected' && reason ? { rejectionReason: reason } : {})
+        },
+        $push: {
+          statusHistory: {
+            status: status,
+            date: new Date(),
+            updatedBy: req.user?._id,
+            note: status === 'rejected' ? reason : `Application ${status} by admin`
+          }
+        }
+      },
+      { new: true }
+    );
+    
+    // If application not found, try to create it
+    if (!application) {
+      console.log(`Application not found with studentId: ${studentId} and scholarshipId: ${scholarshipId}, trying alternate queries...`);
+      
+      // Try finding by only studentId
+      const appByStudent = await Application.findOne({ studentId });
+      if (appByStudent) {
+        console.log(`Found application by studentId: ${appByStudent._id}`);
+        await Application.updateOne(
+          { _id: appByStudent._id },
+          { 
+            $set: { 
+              status: status, 
+              reviewedBy: req.user?._id,
+              reviewedAt: new Date(),
+              ...(status === 'rejected' && reason ? { rejectionReason: reason } : {})
+            },
+            $push: {
+              statusHistory: {
+                status: status,
+                date: new Date(),
+                updatedBy: req.user?._id,
+                note: status === 'rejected' ? reason : `Application ${status} by admin`
+              }
+            }
+          }
+        );
+        console.log(`Updated application by studentId: ${appByStudent._id}`);
+      } else {
+        // Create a new application
+        try {
+          const newApp = new Application({
+            studentId,
+            scholarshipId,
+            status,
+            reviewedBy: req.user?._id,
+            reviewedAt: new Date(),
+            appliedDate: new Date(),
+            ...(status === 'rejected' && reason ? { rejectionReason: reason } : {}),
+            statusHistory: [{
+              status,
+              date: new Date(),
+              updatedBy: req.user?._id,
+              note: status === 'rejected' ? reason : `Application ${status} by admin`
+            }]
+          });
+          await newApp.save();
+          console.log(`Created new application document: ${newApp._id}`);
+        } catch (createErr) {
+          console.error("Error creating application document:", createErr);
+        }
+      }
+    }
+    
+    console.log(`Updated application in Application collection: ${application ? application._id : 'Not found'}`);
+    
     // Update scholarship counts if applicable
     if (scholarshipId && mongoose.Types.ObjectId.isValid(scholarshipId)) {
       const scholarship = await Scholarship.findById(scholarshipId);
@@ -428,6 +508,93 @@ exports.reviewApplication = asyncHandler(async (req, res) => {
       }
       
       await student.save({ session });
+      
+      // IMPORTANT: Also update the application in the Application collection
+      // This ensures the MongoDB trigger will fire
+      const Application = mongoose.model('Application');
+      const application = await Application.findOneAndUpdate(
+        { studentId, scholarshipId },
+        { 
+          $set: { 
+            status: status, 
+            reviewedBy: req.user?._id,
+            reviewedAt: new Date(),
+            ...(status === 'rejected' && reason ? { rejectionReason: reason } : {})
+          },
+          $push: {
+            statusHistory: {
+              status: status,
+              date: new Date(),
+              updatedBy: req.user?._id,
+              note: status === 'rejected' ? reason : `Application ${status} by admin`
+            }
+          }
+        },
+        { new: true, session }
+      );
+      
+      // If application not found, try to create it
+      if (!application) {
+        console.log(`Application not found with studentId: ${studentId} and scholarshipId: ${scholarshipId}, trying alternate queries...`);
+        
+        // Try finding by only studentId
+        const appByStudent = await Application.findOne({ studentId }).session(session);
+        if (appByStudent) {
+          console.log(`Found application by studentId: ${appByStudent._id}`);
+          await Application.updateOne(
+            { _id: appByStudent._id },
+            { 
+              $set: { 
+                status: status, 
+                reviewedBy: req.user?._id,
+                reviewedAt: new Date(),
+                ...(status === 'rejected' && reason ? { rejectionReason: reason } : {})
+              },
+              $push: {
+                statusHistory: {
+                  status: status,
+                  date: new Date(),
+                  updatedBy: req.user?._id,
+                  note: status === 'rejected' ? reason : `Application ${status} by admin`
+                }
+              }
+            },
+            { session }
+          );
+          console.log(`Updated application by studentId: ${appByStudent._id}`);
+        } else {
+          // Create a new application
+          try {
+            const newApp = new Application({
+              studentId,
+              scholarshipId,
+              status,
+              reviewedBy: req.user?._id,
+              reviewedAt: new Date(),
+              appliedDate: new Date(),
+              ...(status === 'rejected' && reason ? { rejectionReason: reason } : {}),
+              statusHistory: [{
+                status,
+                date: new Date(),
+                updatedBy: req.user?._id,
+                note: status === 'rejected' ? reason : `Application ${status} by admin`
+              }],
+              statusHistory: [{
+                status,
+                date: new Date(),
+                updatedBy: req.user?._id,
+                note: status === 'rejected' ? reason : `Application ${status} by admin`
+              }]
+            });
+            await newApp.save({ session });
+            console.log(`Created new application document: ${newApp._id}`);
+          } catch (createErr) {
+            console.error("Error creating application document:", createErr);
+          }
+        }
+      }
+      
+      console.log(`Updated application in Application collection: ${application ? application._id : 'Not found'}`);
       
       // Update scholarship counts if scholarshipId is valid
       if (scholarshipId && mongoose.Types.ObjectId.isValid(scholarshipId)) {

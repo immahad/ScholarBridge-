@@ -18,7 +18,7 @@ const ApplicationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', 'accepted'],
+    enum: ['pending', 'approved', 'rejected', 'accepted', 'funded'],
     default: 'pending'
   },
   adminNotes: {
@@ -29,11 +29,15 @@ const ApplicationSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Payment'
   },
-  // Add any additional fields that might be in the embedded schema
-  essays: {
-    type: Map,
-    of: String
-  },
+  // Essays are now an array of objects with question and answer
+  essays: [{
+    question: String,
+    answer: String,
+    _id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: () => new mongoose.Types.ObjectId()
+    }
+  }],
   documents: [
     {
       name: String,
@@ -41,6 +45,10 @@ const ApplicationSchema = new mongoose.Schema({
       uploadedAt: {
         type: Date,
         default: Date.now
+      },
+      _id: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: () => new mongoose.Types.ObjectId()
       }
     }
   ],
@@ -49,7 +57,7 @@ const ApplicationSchema = new mongoose.Schema({
     {
       status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected', 'accepted'],
+        enum: ['pending', 'approved', 'rejected', 'accepted', 'funded'],
       },
       date: {
         type: Date,
@@ -61,7 +69,23 @@ const ApplicationSchema = new mongoose.Schema({
         ref: 'User'
       }
     }
-  ]
+  ],
+  // Add reviewed fields
+  reviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  reviewedAt: {
+    type: Date
+  },
+  // Add funded fields
+  fundedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  fundedAt: {
+    type: Date
+  }
 }, { timestamps: true });
 
 // Add indexes for efficient querying

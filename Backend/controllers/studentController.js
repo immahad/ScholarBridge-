@@ -3,6 +3,7 @@ const Student = require('../models/Student');
 const Scholarship = require('../models/Scholarship');
 const Admin = require('../models/Admin');
 const Donor = require('../models/Donor');
+const Application = require('../models/Application');
 const mongoose = require('mongoose');
 const { asyncHandler, createError } = require('../middleware/errorHandler');
 
@@ -467,7 +468,7 @@ exports.applyForScholarship = asyncHandler(async (req, res) => {
     }
     
     // Create application
-    const application = {
+    const applicationData = {
       scholarshipId,
       status: 'pending',
       appliedAt: new Date(),
@@ -479,7 +480,7 @@ exports.applyForScholarship = asyncHandler(async (req, res) => {
     };
     
     // Add application to student
-    student.scholarshipApplications.push(application);
+    student.scholarshipApplications.push(applicationData);
     
     // Save student with new application
     await student.save();
@@ -489,6 +490,32 @@ exports.applyForScholarship = asyncHandler(async (req, res) => {
       scholarshipId,
       { $inc: { applicantCount: 1 } }
     );
+    
+    // IMPORTANT: Also save to the applications collection
+    // Create a new Application document
+    const newApplication = new Application({
+      studentId: studentId,
+      scholarshipId: scholarshipId,
+      status: 'pending',
+      appliedDate: new Date(),
+      essays: [{
+        question: 'Personal Statement',
+        answer: statement
+      }],
+      documents: documents ? documents.map(doc => ({
+        name: doc.name,
+        uploadedAt: new Date()
+      })) : [],
+      statusHistory: [{
+        status: 'pending',
+        date: new Date(),
+        note: 'Application submitted'
+      }]
+    });
+    
+    // Save the application to the collection
+    const savedApplication = await newApplication.save();
+    console.log(`Created application in applications collection with ID: ${savedApplication._id}`);
     
     res.status(201).json({
       success: true,
