@@ -63,13 +63,19 @@ async function syncUserDonorRecords(userId, donorId) {
  * @access Private (Donor only)
  */
 exports.getProfile = asyncHandler(async (req, res) => {
-  const donorId = req.user._id;
+  const userId = req.user._id;
   
-  const donor = await Donor.findById(donorId);
+  console.log('Getting donor profile for user:', userId);
+  
+  // Find the donor by userId field, not by _id
+  const donor = await Donor.findOne({ userId });
   
   if (!donor) {
+    console.log(`Donor profile not found for user ${userId}`);
     throw createError('Donor profile not found', 404);
   }
+  
+  console.log(`Found donor profile: ${donor._id}`);
   
   res.status(200).json({
     success: true,
@@ -83,7 +89,9 @@ exports.getProfile = asyncHandler(async (req, res) => {
  * @access Private (Donor only)
  */
 exports.updateProfile = asyncHandler(async (req, res) => {
-  const donorId = req.user._id;
+  const userId = req.user._id;
+  
+  console.log('Updating donor profile for user:', userId);
   
   // Get profile data from request body
   const {
@@ -102,9 +110,9 @@ exports.updateProfile = asyncHandler(async (req, res) => {
     bio
   } = req.body;
   
-  // Find and update donor
-  const donor = await Donor.findByIdAndUpdate(
-    donorId,
+  // Find and update donor by userId, not by _id
+  const donor = await Donor.findOneAndUpdate(
+    { userId },
     {
       firstName,
       lastName,
@@ -125,8 +133,11 @@ exports.updateProfile = asyncHandler(async (req, res) => {
   );
   
   if (!donor) {
+    console.log(`Donor profile not found for user ${userId}`);
     throw createError('Donor profile not found', 404);
   }
+  
+  console.log(`Updated donor profile: ${donor._id}`);
   
   res.status(200).json({
     success: true,
@@ -429,30 +440,42 @@ exports.getDonationDetails = asyncHandler(async (req, res) => {
   const donorId = req.user._id;
   const donationId = req.params.id;
   
-  // Find donor
-  const donor = await Donor.findById(donorId);
+  // Log the incoming request for debugging
+  console.log(`Getting donation details: donorId=${donorId}, donationId=${donationId}`);
+  
+  // Find donor by user ID instead of donor ID directly
+  const donor = await Donor.findOne({ userId: donorId });
   
   if (!donor) {
+    console.log(`Donor not found for user: ${donorId}`);
     throw createError('Donor profile not found', 404);
   }
   
-  // Find donation
-  const donation = donor.donationHistory.id(donationId);
+  // Find donation by ID
+  const donation = donor.donationHistory.find(d => d._id.toString() === donationId);
   
   if (!donation) {
+    console.log(`Donation ${donationId} not found for donor: ${donor._id}`);
     throw createError('Donation not found', 404);
   }
   
   // Get scholarship details
-  const scholarship = await Scholarship.findById(donation.scholarshipId);
+  let scholarship = null;
+  if (donation.scholarshipId) {
+    scholarship = await Scholarship.findById(donation.scholarshipId);
+    console.log(`Found scholarship: ${scholarship ? scholarship._id : 'Not found'}`);
+  }
   
   // Get student details and application
-  const student = await Student.findById(donation.studentId);
+  let student = null;
+  if (donation.studentId) {
+    student = await Student.findById(donation.studentId);
+    console.log(`Found student: ${student ? student._id : 'Not found'}`);
+  }
   
   // Find the student's application for this scholarship
   let application = null;
-  
-  if (student) {
+  if (student && donation.scholarshipId) {
     application = student.scholarshipApplications.find(
       app => app.scholarshipId.toString() === donation.scholarshipId.toString()
     );
@@ -533,7 +556,7 @@ exports.getDashboard = asyncHandler(async (req, res) => {
     
     console.log('Fetching dashboard for donor:', donor._id);
     console.log('Current totalDonated:', donor.totalDonated);
-    console.log('Current donationHistory:', donor.donationHistory);
+    console.log('Current donationHistory length:', donor.donationHistory.length);
     
     // Recalculate total just to be sure
     const calculatedTotal = donor.donationHistory.reduce((sum, donation) => {
@@ -551,44 +574,91 @@ exports.getDashboard = asyncHandler(async (req, res) => {
       await donor.save();
     }
     
+    // Get completed donations only
+    const completedDonations = donor.donationHistory.filter(d => d.status === 'completed');
+    
     // Donation summary
     const donationSummary = {
       totalDonated: donor.totalDonated,
-      totalDonations: donor.donationHistory.length,
-      studentsHelped: new Set(donor.donationHistory.map(d => d.studentId?.toString()).filter(Boolean)).size
+      totalDonations: completedDonations.length,
+      studentsHelped: new Set(completedDonations.map(d => d.studentId?.toString()).filter(Boolean)).size
     };
     
     console.log('Donation summary:', donationSummary);
     
     // Recent donations
     const recentDonations = await Promise.all(
-      donor.donationHistory
+      completedDonations
         .sort((a, b) => b.donationDate - a.donationDate)
         .slice(0, 5)
         .map(async (donation) => {
-          // Get scholarship details
-          const scholarship = await Scholarship.findById(donation.scholarshipId)
-            .select('title');
+          console.log(`Processing donation ${donation._id}, scholarshipId: ${donation.scholarshipId || 'none'}, studentId: ${donation.studentId || 'none'}`);
           
-          // Get student details
-          const student = await Student.findById(donation.studentId)
-            .select('firstName lastName institution program');
+          // Get scholarship details with better error handling
+          let scholarship = null;
+          if (donation.scholarshipId) {
+            try {
+              scholarship = await Scholarship.findById(donation.scholarshipId).select('title amount description');
+              if (!scholarship) {
+                console.log(`Warning: Scholarship ${donation.scholarshipId} not found for donation ${donation._id}`);
+              }
+            } catch (err) {
+              console.error(`Error fetching scholarship for donation ${donation._id}:`, err.message);
+            }
+          }
           
+          // For general donations (without scholarshipId), create a generic scholarship object
+          if (!scholarship) {
+            scholarship = {
+              title: 'General Donation'
+            };
+          }
+          
+          // Get student details with better error handling
+          let student = null;
+          if (donation.studentId) {
+            try {
+              student = await Student.findById(donation.studentId).select('firstName lastName institution program');
+              if (!student) {
+                console.log(`Warning: Student ${donation.studentId} not found for donation ${donation._id}`);
+              }
+            } catch (err) {
+              console.error(`Error fetching student for donation ${donation._id}:`, err.message);
+            }
+          }
+          
+          // For donations to the general fund (not to a specific student)
+          // Use default values that make it clear this is a general donation
+          if (!student) {
+            student = { 
+              firstName: 'General', 
+              lastName: 'Fund',
+              institution: 'ScholarBridge Foundation',
+              program: 'General Support'
+            };
+          }
+          
+          // Create a detailed donation object
           return {
             _id: donation._id,
             amount: donation.amount,
             donationDate: donation.donationDate,
-            scholarship: scholarship ? {
+            paymentMethod: donation.paymentMethod,
+            status: donation.status,
+            isAnonymous: donation.isAnonymous,
+            notes: donation.notes,
+            scholarship: {
               _id: scholarship._id,
-              title: scholarship.title
-            } : null,
-            student: student ? {
+              title: scholarship.title,
+              amount: scholarship.amount
+            },
+            student: {
               _id: student._id,
               firstName: student.firstName,
               lastName: student.lastName,
               institution: student.institution,
               program: student.program
-            } : null
+            }
           };
         })
     );
@@ -608,8 +678,8 @@ exports.getDashboard = asyncHandler(async (req, res) => {
     }).reverse();
     
     // Calculate monthly totals
-    donor.donationHistory.forEach(donation => {
-      if (donation.status === 'completed' && donation.donationDate >= sixMonthsAgo) {
+    completedDonations.forEach(donation => {
+      if (donation.donationDate >= sixMonthsAgo) {
         const monthIndex = monthlyDonations.findIndex(m => 
           m.month === donation.donationDate.toLocaleString('default', { month: 'short' })
         );
@@ -621,11 +691,20 @@ exports.getDashboard = asyncHandler(async (req, res) => {
     
     console.log('Monthly donation trends:', monthlyDonations);
     
+    // Get count of eligible students (those with approved applications)
+    const eligibleStudentsCount = await Student.countDocuments({
+      'scholarshipApplications.status': 'approved',
+      profileCompleted: true
+    });
+    
+    console.log('Eligible students count:', eligibleStudentsCount);
+    
     res.status(200).json({
       success: true,
       donationSummary,
       recentDonations,
-      monthlyDonations
+      monthlyDonations,
+      eligibleStudentsCount
     });
   } catch (error) {
     console.error('Error fetching donor dashboard:', {

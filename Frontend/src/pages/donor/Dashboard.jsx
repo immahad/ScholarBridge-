@@ -59,12 +59,12 @@ const DonorDashboard = () => {
           
           setDonations(recentDonations.map(d => ({
             id: d._id,
-            studentName: `${d.student?.firstName || 'N/A'} ${d.student?.lastName || ''}`.trim(),
+            studentName: d.student ? `${d.student.firstName || ''} ${d.student.lastName || ''}`.trim() : 'Unknown Student',
             program: d.student?.program || 'N/A',
             institution: d.student?.institution || 'N/A',
             amount: d.amount || 0,
             date: d.donationDate,
-            scholarshipName: d.scholarship?.title || 'N/A'
+            scholarshipName: d.scholarship?.title || 'General Donation'
           })));
           
           if (monthlyDonations && monthlyDonations.length > 0) {
@@ -461,7 +461,7 @@ const DonorDashboard = () => {
           <div className="dashboard-section">
             <div className="section-header">
               <h2>Recent Donations</h2>
-              <Link to="/donor/students" className="btn btn-primary">
+              <Link to="/donor/payment" className="btn btn-primary">
                 <FiFilePlus className="btn-icon" /> Donate to More Students
               </Link>
             </div>

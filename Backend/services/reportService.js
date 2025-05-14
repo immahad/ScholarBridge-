@@ -454,6 +454,20 @@ const generateDonationReport = async (startDate, endDate) => {
     { $sort: { year: 1, month: 1 } }
   ]);
   
+  // Format monthly trends for frontend compatibility
+  const monthlyTotals = monthlyTrends.map(item => {
+    // Convert numeric month to month name
+    const date = new Date(item.year, item.month - 1, 1);
+    const monthName = date.toLocaleString('default', { month: 'short' });
+    
+    return {
+      year: item.year,
+      month: monthName,
+      count: item.count,
+      total: item.totalAmount
+    };
+  });
+
   // Get top donors
   const topDonors = await Donor.aggregate([
     { $sort: { totalDonated: -1 } },
@@ -484,7 +498,8 @@ const generateDonationReport = async (startDate, endDate) => {
       donationsInPeriod: totalDonationsInPeriod,
       amountInPeriod: totalAmountInPeriod,
       donationsByStatus,
-      donationsByMethod
+      donationsByMethod,
+      monthlyTotals
     },
     details: {
       monthlyTrends,

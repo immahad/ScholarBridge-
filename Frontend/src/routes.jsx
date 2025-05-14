@@ -43,6 +43,7 @@ import PaymentForm from './pages/donor/PaymentForm';
 import GeneralDonationForm from './pages/donor/GeneralDonationForm';
 import DonationSuccess from './pages/donor/DonationSuccess';
 import DonationCancel from './pages/donor/DonationCancel';
+import DonationDetail from './pages/donor/DonationDetail';
 
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -108,6 +109,7 @@ const router = createBrowserRouter([
       { path: 'donor/payment', element: <GeneralDonationForm /> },
       { path: 'donor/donation/success', element: <DonationSuccess /> },
       { path: 'donor/donation/cancel', element: <DonationCancel /> },
+      { path: 'donor/donations/:donationId', element: <DonationDetail /> },
       { path: 'donor/reports', element: <DonorReports /> },
       
       // Admin routes
