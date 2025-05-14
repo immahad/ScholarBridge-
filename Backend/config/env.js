@@ -35,7 +35,7 @@ module.exports = {
   
   // MongoDB configuration
   db: {
-    uri: process.env.MONGO_URI || 'mongodb://localhost:27017/scholarship_management'
+    uri: process.env.MONGO_URI || 'mongodb://localhost:27017/scholarbridge'
   },
     // JWT configuration
   jwt: {

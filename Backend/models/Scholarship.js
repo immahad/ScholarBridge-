@@ -37,7 +37,21 @@ const scholarshipSchema = new mongoose.Schema({
   },
   category: { 
     type: String, 
-    enum: ['Engineering', 'Science', 'Arts', 'Business'], 
+    enum: [
+      'Engineering',
+      'Science',
+      'Arts',
+      'Business',
+      'Medicine',
+      'Law',
+      'Education',
+      'Social Sciences',
+      'Humanities',
+      'Technology',
+      'Computer Science',
+      'Mathematics',
+      'Other'
+    ], 
     required: [true, 'Scholarship category is required'] 
   },
   eligibilityRequirements: { 
@@ -128,6 +142,54 @@ scholarshipSchema.statics.findActiveScholarships = function() {
     deadlineDate: { $gt: new Date() },
     visible: true
   });
+};
+
+// Static method to fix all scholarships in the database
+scholarshipSchema.statics.fixAllScholarships = async function() {
+  console.log('Starting scholarship fixing process');
+  
+  // 1. Find active scholarships that are not visible (they should be visible)
+  const activeButNotVisible = await this.find({
+    status: 'active',
+    visible: false
+  });
+  
+  console.log(`Found ${activeButNotVisible.length} active scholarships that are not visible`);
+  
+  // Make active scholarships visible
+  for (const scholarship of activeButNotVisible) {
+    scholarship.visible = true;
+    await scholarship.save();
+    console.log(`Fixed visibility for scholarship: ${scholarship._id} - ${scholarship.title}`);
+  }
+  
+  // 2. Find scholarships that were approved (have approvedBy and approvedAt) but don't have the right status
+  const approvedButWrongStatus = await this.find({
+    approvedBy: { $exists: true, $ne: null },
+    approvedAt: { $exists: true, $ne: null },
+    $or: [
+      { status: { $ne: 'active' } },
+      { visible: false }
+    ],
+    status: { $ne: 'rejected' } // Don't modify rejected scholarships
+  });
+  
+  console.log(`Found ${approvedButWrongStatus.length} approved scholarships with wrong status/visibility`);
+  
+  // Make approved scholarships active and visible
+  for (const scholarship of approvedButWrongStatus) {
+    scholarship.status = 'active';
+    scholarship.visible = true;
+    await scholarship.save();
+    console.log(`Fixed status for scholarship: ${scholarship._id} - ${scholarship.title}`);
+  }
+  
+  // Return stats about fixed scholarships
+  return {
+    activeFixed: activeButNotVisible.length,
+    approvedFixed: approvedButWrongStatus.length,
+    totalFixed: activeButNotVisible.length + approvedButWrongStatus.length
+  };
 };
 
 // Create Scholarship model

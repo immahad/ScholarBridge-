@@ -4,6 +4,7 @@ import { FiEdit, FiTrash2, FiEye, FiPlus, FiFilter, FiSearch } from 'react-icons
 import { useAuth } from '../../context/AuthUtils';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
+import '../../styles/admin.css';
 
 const AdminManageScholarships = () => {
   const { token } = useAuth();
@@ -125,22 +126,6 @@ const AdminManageScholarships = () => {
     }).format(amount || 0);
   };
 
-  const getStatusBadgeClass = (status) => {
-    switch(status?.toLowerCase()) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-      case 'closed':
-        return 'bg-red-100 text-red-800';
-      case 'draft':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'expired':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-blue-100 text-blue-800';
-    }
-  };
-
   const goToPreviousPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
@@ -154,129 +139,160 @@ const AdminManageScholarships = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Manage Scholarships</h1>
-        <Link to="/admin/scholarships/create" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center">
-          <FiPlus className="mr-2" />
-          Add New Scholarship
-        </Link>
+    <div className="admin-page">
+      <div className="admin-page-header">
+        <h1 className="admin-page-title">Manage Scholarships</h1>
+        <div className="admin-header-actions">
+          <button
+            onClick={async () => {
+              try {
+                setLoading(true);
+                const response = await axios.post('/api/admin/scholarships/fix', {}, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                if (response.data.success) {
+                  toast.success('Scholarships repaired successfully');
+                  console.log('Fix results:', response.data.fixed);
+                  // Show detailed message
+                  const { activeFixCount, approvedFixCount, totalFixed } = response.data.fixed;
+                  if (totalFixed > 0) {
+                    toast.info(`Fixed ${totalFixed} scholarships: ${activeFixCount} active + ${approvedFixCount} approved`);
+                  } else {
+                    toast.info('No scholarships needed fixing');
+                  }
+                  // Refresh the scholarship list
+                  fetchScholarships();
+                } else {
+                  toast.error('Failed to repair scholarships');
+                }
+              } catch (error) {
+                console.error('Error fixing scholarships:', error);
+                toast.error(error.response?.data?.message || 'Failed to repair scholarships');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            className="admin-button admin-button-warning"
+            disabled={loading}
+          >
+            <FiFilter />
+            Fix Visibility Issues
+          </button>
+          <Link to="/admin/scholarships/create" className="admin-button admin-button-primary">
+            <FiPlus />
+            Add New Scholarship
+          </Link>
+        </div>
       </div>
       
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
+      <div className="admin-filters">
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-grow relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FiSearch className="text-gray-400" />
-            </div>
+          <div className="admin-search-wrapper">
+            <FiSearch className="admin-search-icon" />
             <input
               type="text"
               placeholder="Search scholarships..."
-              className="w-full pl-10 p-2 border rounded"
+              className="admin-search-input"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="md:w-48">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FiFilter className="text-gray-400" />
-              </div>
-              <select 
-                className="w-full pl-10 p-2 border rounded appearance-none bg-white"
-                value={filterStatus}
-                onChange={(e) => {
-                  setFilterStatus(e.target.value);
-                  setCurrentPage(1); // Reset to first page when filter changes
-                }}
-              >
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="closed">Closed</option>
-                <option value="draft">Draft</option>
-                <option value="expired">Expired</option>
-              </select>
-            </div>
+          <div className="admin-filter-wrapper md:w-48">
+            <select 
+              className="admin-filter-select"
+              value={filterStatus}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setCurrentPage(1); // Reset to first page when filter changes
+              }}
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="closed">Closed</option>
+              <option value="draft">Draft</option>
+              <option value="expired">Expired</option>
+            </select>
           </div>
         </div>
       </div>
       
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="admin-loading">
+          <div className="admin-loading-spinner"></div>
         </div>
       ) : error ? (
-        <div className="bg-red-50 p-4 rounded-md text-red-700 mb-6">
-          <p>{error}</p>
+        <div className="admin-card">
+          <p className="text-red-600 mb-2">{error}</p>
           <button 
             onClick={fetchScholarships}
-            className="mt-2 text-sm underline hover:text-red-900"
+            className="admin-button admin-button-secondary mt-2"
           >
             Retry
           </button>
         </div>
       ) : filteredScholarships.length === 0 ? (
-        <div className="bg-gray-50 p-6 rounded-md text-center">
-          <p className="text-gray-600 mb-2">No scholarships found matching your criteria.</p>
+        <div className="admin-empty-state">
+          <p>No scholarships found matching your criteria.</p>
           {searchTerm || filterStatus !== 'all' ? (
             <button 
               onClick={() => {
                 setSearchTerm('');
                 setFilterStatus('all');
               }}
-              className="text-blue-600 underline hover:text-blue-800"
+              className="admin-button admin-button-secondary"
             >
               Clear filters
             </button>
           ) : (
             <Link 
               to="/admin/scholarships/create"
-              className="text-blue-600 underline hover:text-blue-800"
+              className="admin-button admin-button-primary"
             >
               Create your first scholarship
             </Link>
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white rounded-lg shadow">
+        <div className="admin-table-container">
+          <table className="admin-table">
             <thead>
-              <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                <th className="py-3 px-6 text-left">Title</th>
-                <th className="py-3 px-6 text-left">Amount</th>
-                <th className="py-3 px-6 text-left">Created By</th>
-                <th className="py-3 px-6 text-left">Deadline</th>
-                <th className="py-3 px-6 text-left">Status</th>
-                <th className="py-3 px-6 text-center">Actions</th>
+              <tr>
+                <th>Title</th>
+                <th>Amount</th>
+                <th>Created By</th>
+                <th>Deadline</th>
+                <th>Status</th>
+                <th className="text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="text-gray-600 text-sm">
+            <tbody>
               {filteredScholarships.map((scholarship) => (
-                <tr key={scholarship._id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="py-3 px-6 text-left font-medium">{scholarship.title}</td>
-                  <td className="py-3 px-6 text-left">{formatCurrency(scholarship.amount)}</td>
-                  <td className="py-3 px-6 text-left">
+                <tr key={scholarship._id}>
+                  <td className="admin-table-title">{scholarship.title}</td>
+                  <td>{formatCurrency(scholarship.amount)}</td>
+                  <td>
                     {scholarship.createdBy?.firstName ? `${scholarship.createdBy.firstName} ${scholarship.createdBy.lastName || ''}`.trim() : 'N/A'}
                   </td>
-                  <td className="py-3 px-6 text-left">
+                  <td>
                     {formatDate(scholarship.deadlineDate)}
                   </td>
-                  <td className="py-3 px-6 text-left">
-                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(scholarship.status)}`}>
+                  <td>
+                    <span className={`admin-badge admin-badge-${scholarship.status?.toLowerCase() || 'inactive'}`}>
                       {scholarship.status || 'Unknown'}
                     </span>
                   </td>
-                  <td className="py-3 px-6 text-center">
-                    <div className="flex item-center justify-center gap-3">
-                      <Link to={`/admin/scholarships/view/${scholarship._id}`} className="text-blue-500 hover:text-blue-700">
+                  <td>
+                    <div className="admin-table-actions">
+                      <Link to={`/admin/scholarships/view/${scholarship._id}`} className="admin-table-action">
                         <FiEye size={18} title="View" />
                       </Link>
-                      <Link to={`/admin/scholarships/edit/${scholarship._id}`} className="text-yellow-500 hover:text-yellow-700">
+                      <Link to={`/admin/scholarships/edit/${scholarship._id}`} className="admin-table-action edit">
                         <FiEdit size={18} title="Edit" />
                       </Link>
                       <button 
                         onClick={() => handleDeleteScholarship(scholarship._id)}
-                        className="text-red-500 hover:text-red-700"
+                        className="admin-table-action delete"
                       >
                         <FiTrash2 size={18} title="Delete" />
                       </button>
@@ -289,48 +305,34 @@ const AdminManageScholarships = () => {
           
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center mt-6">
-              <nav className="flex items-center space-x-2">
+            <div className="admin-pagination">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className="admin-pagination-button nav"
+              >
+                Previous
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <button
-                  onClick={goToPreviousPage}
-                  disabled={currentPage === 1}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === 1 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`admin-pagination-button ${
+                    currentPage === page ? 'active' : ''
                   }`}
                 >
-                  Previous
+                  {page}
                 </button>
-                
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1 rounded ${
-                        currentPage === page
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-                
-                <button
-                  onClick={goToNextPage}
-                  disabled={currentPage === totalPages}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === totalPages
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Next
-                </button>
-              </nav>
+              ))}
+              
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="admin-pagination-button nav"
+              >
+                Next
+              </button>
             </div>
           )}
         </div>

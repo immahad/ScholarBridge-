@@ -10,12 +10,16 @@ import {
   FiAlertTriangle, 
   FiTrash2, 
   FiSearch,
-  FiFilter
+  FiFilter,
+  FiUsers,
+  FiUser
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { adminService } from '../../services/api';
 import { useAuth } from '../../context/AuthUtils';
 import axios from 'axios';
+import '../../styles/admin.css';
+import '../../styles/admin-users.css';
 
 const StudentStatusPill = ({ status }) => {
   // Add a default status if undefined
@@ -90,13 +94,13 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, userName }) => {
         </p>
         <div className="flex justify-center gap-4">
           <button
-            className="px-6 py-2 bg-gray-200 text-gray-800 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            className="admin-button admin-button-secondary"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
-            className="px-6 py-2 bg-rose-500 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500"
+            className="admin-button admin-button-danger"
             onClick={onConfirm}
           >
             Delete
@@ -537,412 +541,282 @@ const SimpleManageUsers = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gray-50 transition-colors duration-300">
-      <div className="container mx-auto px-4 py-6 max-w-7xl animate-fadeIn">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Manage Users</h1>
-            <p className="text-gray-600 mt-1">Administer student and donor accounts</p>
-          </div>
-        </div>
-        
-        {/* Statistics Section - All in one row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-6">
-          {/* Student Stats */}
-          <div className="lg:col-span-2 xl:col-span-2">
-            <StatCard 
-              title="Total Students" 
-              value={stats.totalStudents} 
-              icon={<FiUserCheck size={20} className="text-blue-600" />}
-              color="border-blue-600"
-              textColor="text-blue-700"
-              bgColor="bg-blue-100"
-              delay={0}
-            />
-          </div>
-          <div className="lg:col-span-2 xl:col-span-2">
-            <StatCard 
-              title="Pending Applications" 
-              value={stats.pendingApplications} 
-              icon={<FiClock size={20} className="text-blue-600" />}
-              color="border-blue-600"
-              textColor="text-blue-700"
-              bgColor="bg-blue-100"
-              delay={0.1}
-            />
-          </div>
-          <div className="lg:col-span-2 xl:col-span-2">
-            <StatCard 
-              title="Approved Applications" 
-              value={stats.approvedApplications} 
-              icon={<FiCheckCircle size={20} className="text-green-600" />}
-              color="border-green-600"
-              textColor="text-green-700"
-              bgColor="bg-green-100"
-              delay={0.2}
-            />
-          </div>
-          <div className="lg:col-span-2 xl:col-span-2">
-            <StatCard 
-              title="Funded Students" 
-              value={stats.fundedStudents} 
-              icon={<FiDollarSign size={20} className="text-blue-600" />}
-              color="border-blue-600"
-              textColor="text-blue-700"
-              bgColor="bg-blue-100"
-              delay={0.3}
-            />
-          </div>
-          
-          {/* Donor Stats */}
-          <div className="lg:col-span-2 xl:col-span-2">
-            <StatCard 
-              title="Total Donors" 
-              value={stats.totalDonors} 
-              icon={<FiUserCheck size={20} className="text-blue-600" />}
-              color="border-blue-600"
-              textColor="text-blue-700"
-              bgColor="bg-blue-100"
-              delay={0.4}
-            />
-          </div>
-          <div className="lg:col-span-2 xl:col-span-2">
-            <StatCard 
-              title="Active Donors" 
-              value={stats.activeDonors} 
-              icon={<FiCheckCircle size={20} className="text-green-600" />}
-              color="border-green-600"
-              textColor="text-green-700"
-              bgColor="bg-green-100"
-              delay={0.5}
-            />
-          </div>
-          <div className="lg:col-span-2 xl:col-span-2">
-            <StatCard 
-              title="Total Donations" 
-              value={`$${(stats.totalDonations || 0).toLocaleString()}`} 
-              icon={<FiDollarSign size={20} className="text-blue-600" />}
-              color="border-blue-600"
-              textColor="text-blue-700"
-              bgColor="bg-blue-100"
-              delay={0.6}
-            />
-          </div>
-          <div className="lg:col-span-2 xl:col-span-2">
-            <StatCard 
-              title="Average Donation" 
-              value={stats.activeDonors > 0 ? 
-                `$${Math.round((stats.totalDonations || 0) / Math.max(1, stats.activeDonors)).toLocaleString()}` : 
-                '$0'} 
-              icon={<FiRefreshCw size={20} className="text-green-600" />}
-              color="border-green-600"
-              textColor="text-green-700"
-              bgColor="bg-green-100"
-              delay={0.7}
-            />
-          </div>
-        </div>
-        
-        {/* Tabs Navigation */}
-        <div className="flex mb-6 bg-white rounded-xl shadow-sm p-2 overflow-hidden tab-container">
-          <button
-            className={`px-6 py-3 font-semibold rounded-lg transition-all duration-300 relative ${
-              activeTab === 'students'
-                ? 'text-white bg-blue-600 shadow-md'
-                : 'text-gray-600'
-            }`}
-            onClick={() => setActiveTab('students')}
-          >
-            <span className="flex items-center">
-              <FiUserCheck className="mr-2" />
-              Students
-            </span>
-          </button>
-          <button
-            className={`px-6 py-3 font-semibold rounded-lg transition-all duration-300 relative ${
-              activeTab === 'donors'
-                ? 'text-white bg-green-600 shadow-md'
-                : 'text-gray-600'
-            }`}
-            onClick={() => setActiveTab('donors')}
-          >
-            <span className="flex items-center">
-              <FiDollarSign className="mr-2" />
-              Donors
-            </span>
-          </button>
-        </div>
-        
-        {/* Search and Filter Section */}
-        <div className="bg-white p-6 rounded-xl shadow-md mb-6 animate-slideInUp">
-          <div className="flex flex-col md:flex-row gap-4 search-filter-container">
-            <div className="flex-grow relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FiSearch className="text-blue-400" />
-              </div>
-              <input
-                type="text"
-                placeholder={`Search ${activeTab}...`}
-                className="w-full pl-10 py-3 pr-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            {activeTab === 'students' && (
-              <div className="md:w-1/4 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiFilter className="text-blue-400" />
-                </div>
-                <select 
-                  className="w-full py-3 pl-10 pr-4 border border-gray-300 rounded-lg bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 appearance-none"
-                  value={applicationStatusFilter}
-                  onChange={(e) => setApplicationStatusFilter(e.target.value)}
-                >
-                  <option value="all">All Applications</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="funded">Funded</option>
-                </select>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {/* Users Table Section */}
-        {loading ? (
-          <div className="bg-white p-8 rounded-xl shadow flex justify-center animate-pulse">
-            <div className="flex items-center space-x-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              <p className="text-gray-700">Loading users...</p>
-            </div>
-          </div>
-        ) : activeTab === 'students' ? (
-          // Students Table
-          getFilteredStudents().length === 0 ? (
-            <div className="bg-white p-8 rounded-xl text-center shadow-sm animate-fadeIn">
-              <FiAlertTriangle className="mx-auto text-blue-500 mb-3" size={40} />
-              <p className="text-gray-700 font-medium">No students found matching your criteria.</p>
-              <p className="text-gray-500 mt-2">Try adjusting your search filters.</p>
-              <button 
-                onClick={() => {
-                  setSearchTerm('');
-                  setApplicationStatusFilter('all');
-                }}
-                className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 rounded-md transition-colors duration-200"
-              >
-                Clear Filters
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-hidden bg-white rounded-xl shadow-md table-container">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 responsive-table enhanced-table">
-                  <thead>
-                    <tr className="bg-blue-50">
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">Student</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">Institution</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {getFilteredStudents().map((student, index) => (
-                      <tr key={student._id || index} className="hover:bg-gray-50 transition-colors duration-200">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {student.firstName} {student.lastName}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {student.email}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {student.institution || student.school || 'Not specified'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex space-x-3 justify-end">
-                            <button
-                              onClick={() => handleStatusToggle(student._id, student.isActive, 'student')}
-                              className={`px-3 py-1 rounded-md ${
-                                student.isActive
-                                  ? 'bg-rose-100 text-rose-700 hover:bg-rose-200'
-                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
-                              }`}
-                            >
-                              {student.isActive ? 'Deactivate' : 'Activate'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(student._id, `${student.firstName} ${student.lastName}`, 'student')}
-                              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 delete-btn"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )
-        ) : (
-          // Donors Table
-          getFilteredDonors().length === 0 ? (
-            <div className="bg-white p-8 rounded-xl text-center shadow-sm animate-fadeIn">
-              <FiAlertTriangle className="mx-auto text-green-500 mb-3" size={40} />
-              <p className="text-gray-700 font-medium">No donors found matching your criteria.</p>
-              <p className="text-gray-500 mt-2">Try adjusting your search filters.</p>
-              <button 
-                onClick={() => {
-                  setSearchTerm('');
-                }}
-                className="mt-4 px-4 py-2 bg-green-100 text-green-700 rounded-md transition-colors duration-200"
-              >
-                Clear Filters
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-hidden bg-white rounded-xl shadow-md table-container">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 responsive-table enhanced-table">
-                  <thead>
-                    <tr className="bg-green-50">
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Donor</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Organization</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Donations</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Total Amount</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {getFilteredDonors().map((donor, index) => (
-                      <tr key={donor._id || index} className="hover:bg-gray-50 transition-colors duration-200">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {donor.firstName} {donor.lastName}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {donor.email}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {donor.organizationName || 'Individual Donor'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {donor.donationsMade || 0}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            ${(donor.totalDonated || 0).toLocaleString()}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex space-x-3 justify-end">
-                            <button
-                              onClick={() => handleStatusToggle(donor._id, donor.isActive, 'donor')}
-                              className={`px-3 py-1 rounded-md ${
-                                donor.isActive
-                                  ? 'bg-rose-100 text-rose-700 hover:bg-rose-200'
-                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
-                              }`}
-                            >
-                              {donor.isActive ? 'Deactivate' : 'Activate'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(donor._id, donor.organizationName || `${donor.firstName} ${donor.lastName}`, 'donor')}
-                              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 delete-btn"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )
-        )}
-        
-        {/* Pagination Controls */}
-        {totalPages > 0 && (
-          <div className="mt-6">
-            <div className="w-full flex justify-end">
-              <div className="flex items-center bg-white p-4 rounded-xl shadow-sm">
-                <nav className="flex items-center space-x-2" aria-label="Pagination">
-                  {/* Previous */}
-                  <button
-                    onClick={goToPreviousPage}
-                    disabled={currentPage === 1}
-                    className={`inline-flex items-center justify-center h-10 w-10 rounded-md bg-green-500 text-white transition duration-200 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'}`}
-                  >
-                    <span className="sr-only">Prev</span>
-                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
+    <div className="admin-page">
+      <div className="admin-page-header">
+        <h1 className="admin-page-title">Manage Users</h1>
+        <p className="admin-page-subtitle">View and manage all users of the platform</p>
+      </div>
 
-                  {/* Page Numbers */}
-                  {[...Array(totalPages).keys()].map(number => (
-                    <button
-                      key={number + 1}
-                      onClick={() => paginate(number + 1)}
-                      className={`inline-flex items-center justify-center h-10 w-10 border text-sm font-medium rounded-md ${
-                        currentPage === number + 1
-                          ? 'bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100'
-                      }`}
-                    >
-                      {number + 1}
-                    </button>
-                  ))}
-
-                  {/* Next */}
-                  <button
-                    onClick={goToNextPage}
-                    disabled={currentPage === totalPages}
-                    className={`inline-flex items-center justify-center h-10 w-10 rounded-md bg-green-500 text-white transition duration-200 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'}`}
-                  >
-                    <span className="sr-only">Next</span>
-                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </nav>
-              </div>
-            </div>
-            <div className="mt-2 pr-4 text-right text-sm text-gray-700">
-              {(activeTab === 'students' ? stats.totalStudents : stats.totalDonors) > 0 ? (
-                <>
-                  Showing <span className="font-medium">{(currentPage - 1) * usersPerPage + 1}</span> - <span className="font-medium">{Math.min(currentPage * usersPerPage, activeTab === 'students' ? stats.totalStudents : stats.totalDonors)}</span> of <span className="font-medium">{activeTab === 'students' ? stats.totalStudents : stats.totalDonors}</span> results
-                </>
-              ) : (
-                <>No results found</>
-              )}
-            </div>
+      {/* Tabs */}
+      <div className="admin-tabs">
+        <button
+          className={`admin-tab ${activeTab === 'students' ? 'admin-tab-active' : 'admin-tab-inactive'}`}
+          onClick={() => setActiveTab('students')}
+        >
+          <FiUsers />
+          Students
+        </button>
+        <button
+          className={`admin-tab ${activeTab === 'donors' ? 'admin-tab-active' : 'admin-tab-inactive'}`}
+          onClick={() => setActiveTab('donors')}
+        >
+          <FiDollarSign />
+          Donors
+        </button>
+      </div>
+      
+      {/* Search and Filter Section */}
+      <div className="admin-card search-filter-container">
+        <div className="search-wrapper">
+          <FiSearch className="search-icon" />
+          <input
+            type="text"
+            placeholder={`Search ${activeTab}...`}
+            className="search-input"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        {activeTab === 'students' && (
+          <div className="filter-wrapper">
+            <FiFilter className="filter-icon" />
+            <select 
+              className="filter-select"
+              value={applicationStatusFilter}
+              onChange={(e) => setApplicationStatusFilter(e.target.value)}
+            >
+              <option value="all">All Applications</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="funded">Funded</option>
+            </select>
           </div>
         )}
       </div>
       
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal 
+      {/* Users Table Section */}
+      {loading ? (
+        <div className="admin-loading">
+          <div className="admin-loading-spinner"></div>
+        </div>
+      ) : activeTab === 'students' ? (
+        // Students Table
+        getFilteredStudents().length === 0 ? (
+          <div className="admin-empty-state">
+            <FiAlertTriangle className="text-4xl text-blue-500 mb-4 mx-auto" />
+            <h2 className="text-xl font-semibold mb-2">No students found</h2>
+            <p>No students found matching your criteria. Try adjusting your search filters.</p>
+            <button 
+              onClick={() => {
+                setSearchTerm('');
+                setApplicationStatusFilter('all');
+              }}
+              className="admin-button admin-button-secondary mt-4"
+            >
+              Clear Filters
+            </button>
+          </div>
+        ) : (
+          <div className="admin-table-container">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Institution</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {getFilteredStudents().map((student, index) => (
+                  <tr key={student._id || index}>
+                    <td>
+                      <div className="user-info">
+                        <div className="user-avatar">
+                          {student.firstName ? student.firstName.charAt(0) : 'S'}
+                        </div>
+                        <div className="user-details">
+                          <div className="user-name">
+                            {student.firstName} {student.lastName}
+                          </div>
+                          <div className="user-email">
+                            {student.email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {student.institution || student.school || 'Not specified'}
+                    </td>
+                    <td>
+                      <span className={`status-badge ${student.isActive ? 'status-active' : 'status-inactive'}`}>
+                        {student.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button
+                          onClick={() => handleStatusToggle(student._id, student.isActive, 'student')}
+                          className={`action-button ${student.isActive ? 'action-button-danger' : 'action-button-primary'}`}
+                        >
+                          {student.isActive ? (
+                            <>
+                              <FiUserX />
+                              Deactivate
+                            </>
+                          ) : (
+                            <>
+                              <FiUserCheck />
+                              Activate
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(student._id, `${student.firstName} ${student.lastName}`, 'student')}
+                          className="action-button action-button-secondary"
+                        >
+                          <FiTrash2 />
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : (
+        // Donors Table
+        getFilteredDonors().length === 0 ? (
+          <div className="admin-empty-state">
+            <FiAlertTriangle className="text-4xl text-green-500 mb-4 mx-auto" />
+            <h2 className="text-xl font-semibold mb-2">No donors found</h2>
+            <p>No donors found matching your criteria. Try adjusting your search filters.</p>
+            <button 
+              onClick={() => {
+                setSearchTerm('');
+              }}
+              className="admin-button admin-button-secondary mt-4"
+            >
+              Clear Filters
+            </button>
+          </div>
+        ) : (
+          <div className="admin-table-container">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Donor</th>
+                  <th>Organization</th>
+                  <th>Donations</th>
+                  <th>Total Amount</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {getFilteredDonors().map((donor, index) => (
+                  <tr key={donor._id || index}>
+                    <td>
+                      <div className="user-info">
+                        <div className="user-avatar">
+                          {donor.firstName ? donor.firstName.charAt(0) : 'D'}
+                        </div>
+                        <div className="user-details">
+                          <div className="user-name">
+                            {donor.firstName} {donor.lastName}
+                          </div>
+                          <div className="user-email">
+                            {donor.email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {donor.organizationName || 'Individual Donor'}
+                    </td>
+                    <td>
+                      {donor.donationsMade || 0}
+                    </td>
+                    <td>
+                      ${(donor.totalDonated || 0).toLocaleString()}
+                    </td>
+                    <td>
+                      <span className={`status-badge ${donor.isActive ? 'status-active' : 'status-inactive'}`}>
+                        {donor.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button
+                          onClick={() => handleStatusToggle(donor._id, donor.isActive, 'donor')}
+                          className={`action-button ${donor.isActive ? 'action-button-danger' : 'action-button-primary'}`}
+                        >
+                          {donor.isActive ? (
+                            <>
+                              <FiUserX />
+                              Deactivate
+                            </>
+                          ) : (
+                            <>
+                              <FiUserCheck />
+                              Activate
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(donor._id, donor.organizationName || `${donor.firstName} ${donor.lastName}`, 'donor')}
+                          className="action-button action-button-secondary"
+                        >
+                          <FiTrash2 />
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
+      
+      {/* Pagination Controls */}
+      {totalPages > 0 && (
+        <div className="pagination">
+          <button
+            onClick={goToPreviousPage}
+            disabled={currentPage === 1}
+            className="pagination-nav-button"
+          >
+            Previous
+          </button>
+          
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => paginate(page)}
+              className={`pagination-button ${currentPage === page ? 'pagination-button-active' : 'pagination-button-inactive'}`}
+            >
+              {page}
+            </button>
+          ))}
+          
+          <button
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+            className="pagination-nav-button"
+          >
+            Next
+          </button>
+        </div>
+      )}
+      
+      {/* Delete confirmation modal */}
+      <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
         onClose={closeDeleteModal}
         onConfirm={confirmDeleteUser}

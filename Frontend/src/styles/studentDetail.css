@@ -1,0 +1,333 @@
+/* Student Detail Page Styles */
+
+.student-detail-page {
+  padding: 40px 20px;
+  background-color: #f9fafc;
+  min-height: 80vh;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.student-detail-header {
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.student-detail-title {
+  color: #1e3a8a;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+
+.student-detail-subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+}
+
+.student-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 25px;
+}
+
+.student-detail-card {
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  padding: 25px;
+  margin-bottom: 25px;
+  transition: box-shadow 0.3s ease;
+}
+
+.student-detail-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.student-detail-profile {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.student-detail-avatar {
+  width: 100px;
+  height: 100px;
+  background-color: #e0e7ff;
+  color: #4f46e5;
+  font-size: 2.5rem;
+  font-weight: 600;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.student-detail-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 5px;
+}
+
+.student-detail-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-bottom: 5px;
+}
+
+.student-detail-info svg {
+  margin-right: 8px;
+  flex-shrink: 0;
+  color: #3b82f6;
+}
+
+.student-detail-section {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.student-detail-section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 15px;
+}
+
+.student-detail-academic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.student-detail-academic-item {
+  margin-bottom: 15px;
+}
+
+.student-detail-label {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.student-detail-value {
+  color: #334155;
+  font-size: 1.05rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.student-detail-value svg {
+  margin-right: 8px;
+  color: #3b82f6;
+}
+
+.student-detail-achievements {
+  list-style-type: disc;
+  padding-left: 20px;
+  margin-top: 10px;
+}
+
+.student-detail-achievements li {
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.student-detail-application {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 15px;
+  transition: all 0.2s ease;
+}
+
+.student-detail-application:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.student-detail-app-header {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.student-detail-app-info {
+  width: 100%;
+}
+
+.student-detail-app-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  margin-bottom: 8px;
+}
+
+.student-detail-app-meta {
+  display: flex;
+  align-items: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.student-detail-app-meta svg {
+  margin-right: 8px;
+  color: #3b82f6;
+}
+
+.student-detail-status {
+  font-weight: 600;
+}
+
+.student-detail-status-approved {
+  color: #16a34a;
+}
+
+.student-detail-status-rejected {
+  color: #dc2626;
+}
+
+.student-detail-status-pending {
+  color: #ca8a04;
+}
+
+.student-detail-status-funded {
+  color: #2563eb;
+}
+
+.student-detail-fund-btn {
+  background-color: #16a34a;
+  color: white;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border: none;
+  font-size: 0.9rem;
+  margin-top: 10px;
+}
+
+.student-detail-fund-btn:hover {
+  background-color: #15803d;
+}
+
+.student-detail-fund-btn svg {
+  margin-right: 6px;
+  font-size: 0.9rem;
+}
+
+.student-detail-statement {
+  margin-top: 15px;
+}
+
+.student-detail-statement-title {
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.student-detail-statement-content {
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.student-detail-empty {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.student-detail-empty-icon {
+  font-size: 3rem;
+  color: #cbd5e1;
+  margin-bottom: 15px;
+}
+
+.student-detail-empty-text {
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+.student-detail-back-link {
+  display: inline-flex;
+  align-items: center;
+  color: #3b82f6;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  margin-top: 20px;
+}
+
+.student-detail-back-link:hover {
+  color: #1d4ed8;
+}
+
+.student-detail-back-link svg {
+  margin-right: 8px;
+}
+
+.student-detail-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.student-detail-loading-spinner {
+  border: 4px solid rgba(59, 130, 246, 0.1);
+  border-radius: 50%;
+  border-top: 4px solid #3b82f6;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+.student-detail-error {
+  padding: 16px;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.student-detail-error svg {
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .student-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .student-detail-app-header {
+    flex-direction: column;
+  }
+  
+  .student-detail-academic-grid {
+    grid-template-columns: 1fr;
+  }
+} 

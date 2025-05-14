@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthUtils';
-import '../../styles/browseStudents.css'; // We'll create this CSS file later
+import '../../styles/browseStudents.css';
 import { FiUser, FiBookOpen, FiAward, FiDollarSign, FiChevronLeft, FiChevronRight, FiFilter, FiSearch, FiRefreshCw, FiBook, FiMapPin, FiCalendar, FiInfo } from 'react-icons/fi';
 
 const BrowseStudents = () => {
@@ -31,7 +31,7 @@ const BrowseStudents = () => {
       // Build query params
       const queryParams = new URLSearchParams({
         page,
-        limit: 10,
+        limit: 8,
         ...Object.fromEntries(
           Object.entries(filters).filter(([_, value]) => value)
         )
@@ -76,17 +76,20 @@ const BrowseStudents = () => {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6">Browse Students</h1>
+    <div className="browse-students-page">
+      <div className="browse-students-header">
+        <h1 className="browse-students-title">Browse Students</h1>
+        <p className="browse-students-subtitle">Find students who match your scholarship criteria</p>
+      </div>
       
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <form onSubmit={handleSearch} className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="browse-students-filters">
+        <form onSubmit={handleSearch} className="browse-students-form">
+          <div className="browse-students-form-group">
+            <label htmlFor="search" className="browse-students-form-label">
               Search
             </label>
-            <div className="relative">
+            <div className="browse-students-input-wrapper">
               <input
                 type="text"
                 id="search"
@@ -94,22 +97,23 @@ const BrowseStudents = () => {
                 value={filters.search}
                 onChange={handleFilterChange}
                 placeholder="Search by name..."
-                className="w-full p-2 pl-10 pr-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="browse-students-form-input"
               />
-              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <FiSearch className="browse-students-input-icon" />
             </div>
           </div>
           
-          <div className="flex-1 min-w-[200px]">
-            <label htmlFor="institution" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="browse-students-form-group">
+            <label htmlFor="institution" className="browse-students-form-label">
               Institution
             </label>
+            <div className="browse-students-input-wrapper">
             <select
               id="institution"
               name="institution"
               value={filters.institution}
               onChange={handleFilterChange}
-              className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="browse-students-form-select"
             >
               <option value="">All Institutions</option>
               <option value="University of Washington">University of Washington</option>
@@ -118,18 +122,21 @@ const BrowseStudents = () => {
               <option value="Harvard University">Harvard University</option>
               <option value="Other">Other</option>
             </select>
+              <FiBookOpen className="browse-students-input-icon" />
+            </div>
           </div>
           
-          <div className="flex-1 min-w-[200px]">
-            <label htmlFor="program" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="browse-students-form-group">
+            <label htmlFor="program" className="browse-students-form-label">
               Program
             </label>
+            <div className="browse-students-input-wrapper">
             <select
               id="program"
               name="program"
               value={filters.program}
               onChange={handleFilterChange}
-              className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="browse-students-form-select"
             >
               <option value="">All Programs</option>
               <option value="Computer Science">Computer Science</option>
@@ -139,23 +146,25 @@ const BrowseStudents = () => {
               <option value="Arts">Arts</option>
               <option value="Other">Other</option>
             </select>
+              <FiBook className="browse-students-input-icon" />
+            </div>
           </div>
           
-          <div className="flex items-end gap-2 min-w-[200px]">
+          <div className="browse-students-actions">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+              className="browse-students-btn browse-students-btn-primary"
             >
-              <FiFilter className="mr-2" />
+              <FiFilter />
               Apply Filters
             </button>
             
             <button
               type="button"
               onClick={clearFilters}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 flex items-center"
+              className="browse-students-btn browse-students-btn-secondary"
             >
-              <FiRefreshCw className="mr-2" />
+              <FiRefreshCw />
               Clear
             </button>
           </div>
@@ -164,65 +173,69 @@ const BrowseStudents = () => {
 
       {/* Student Cards */}
       {loading ? (
-        <div className="flex justify-center my-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="browse-students-loading">
+          <div className="browse-students-loading-spinner"></div>
         </div>
       ) : error ? (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="browse-students-error">
           {error}
         </div>
       ) : students.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded-lg">
-          <FiUser className="mx-auto text-gray-400 text-4xl mb-2" />
-          <p className="text-gray-600">No students found matching your criteria.</p>
+        <div className="browse-students-empty">
+          <div className="browse-students-empty-icon">
+            <FiUser />
+          </div>
+          <p className="browse-students-empty-text">No students found matching your criteria.</p>
           <button
             onClick={clearFilters}
-            className="mt-2 text-blue-600 hover:text-blue-800"
+            className="browse-students-btn browse-students-btn-primary"
           >
             Clear filters and try again
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="browse-students-grid">
             {students.map((student, index) => (
-            <div key={`student-${student._id}-${index}`} className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h2 className="text-xl font-semibold mb-1">{student.firstName} {student.lastName}</h2>
-                    <p className="text-gray-600 flex items-center">
-                      <FiBook className="mr-1" />
+            <div key={`student-${student._id}-${index}`} className="browse-students-card">
+              <div className="browse-students-card-body">
+                <div className="browse-students-card-header">
+                  <div>
+                    <h2 className="browse-students-card-title">{student.firstName} {student.lastName}</h2>
+                    <div className="browse-students-card-info">
+                      <FiBook />
                       {student.program}
-                    </p>
-                    <p className="text-gray-600 flex items-center">
-                      <FiMapPin className="mr-1" />
+                    </div>
+                    <div className="browse-students-card-info">
+                      <FiMapPin />
                       {student.institution}
-                    </p>
+                    </div>
                     {student.graduationYear && (
-                      <p className="text-gray-600 flex items-center">
-                        <FiCalendar className="mr-1" />
+                      <div className="browse-students-card-info">
+                        <FiCalendar />
                         Graduation: {student.graduationYear}
-                      </p>
+                      </div>
                     )}
                   </div>
-                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                    <FiUser className="text-blue-500 text-xl" />
+                  <div className="browse-students-avatar">
+                    {student.firstName ? student.firstName.charAt(0).toUpperCase() : "S"}
                   </div>
                 </div>
                 
-                <div className="mt-4">
-                  <h3 className="font-medium">About</h3>
-                  <p className="text-gray-700 text-sm mt-1 line-clamp-3">
-                    {student.bio || 'No bio provided.'}
+                <div className="browse-students-card-section">
+                  <h3 className="browse-students-card-section-title">About</h3>
+                  <p className="browse-students-card-section-content">
+                    {student.bio ? (
+                      student.bio.length > 150 ? `${student.bio.substring(0, 150)}...` : student.bio
+                    ) : 'No bio provided.'}
                   </p>
                 </div>
                 
-                <div className="mt-4 flex justify-between">
+                <div className="browse-students-card-footer">
                   <Link
                     to={`/donor/students/${student._id}`}
-                    className="inline-block px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                    className="browse-students-btn browse-students-btn-primary"
                   >
-                    <FiInfo className="mr-2" />
+                    <FiInfo />
                     View Profile
                   </Link>
                 </div>
@@ -234,17 +247,13 @@ const BrowseStudents = () => {
       
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center mt-8">
-          <nav className="flex items-center">
+        <div className="browse-students-pagination">
             <button
               onClick={() => setPage(p => Math.max(p - 1, 1))}
               disabled={page === 1}
-              className={`mx-1 px-3 py-1 rounded ${
-                page === 1
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
+            className="browse-students-pagination-btn"
+          >
+            <FiChevronLeft />
               Previous
             </button>
             
@@ -252,11 +261,7 @@ const BrowseStudents = () => {
               <button
                 key={i}
                 onClick={() => setPage(i + 1)}
-                className={`mx-1 px-3 py-1 rounded ${
-                  page === i + 1
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+              className={`browse-students-pagination-btn ${page === i + 1 ? 'active' : ''}`}
               >
                 {i + 1}
               </button>
@@ -265,15 +270,11 @@ const BrowseStudents = () => {
             <button
               onClick={() => setPage(p => Math.min(p + 1, totalPages))}
               disabled={page === totalPages}
-              className={`mx-1 px-3 py-1 rounded ${
-                page === totalPages
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+            className="browse-students-pagination-btn"
             >
               Next
+            <FiChevronRight />
             </button>
-          </nav>
           </div>
       )}
     </div>

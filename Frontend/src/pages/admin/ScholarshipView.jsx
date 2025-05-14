@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthUtils';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { scholarshipService } from '../../services/api';
+import '../../styles/admin.css';
 
 const AdminScholarshipView = () => {
   const { id } = useParams();
@@ -73,9 +74,9 @@ const AdminScholarshipView = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="admin-page">
+        <div className="admin-loading">
+          <div className="admin-loading-spinner"></div>
         </div>
       </div>
     );
@@ -83,120 +84,139 @@ const AdminScholarshipView = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="bg-red-50 p-4 rounded-md text-red-700 mb-6">
-          <p>{error}</p>
+      <div className="admin-page">
+        <div className="admin-card">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Link to="/admin/scholarships" className="admin-button admin-button-secondary">
+            <FiChevronLeft /> Back to Scholarships
+          </Link>
         </div>
-        <Link to="/admin/scholarships" className="text-blue-500 flex items-center">
-          <FiChevronLeft className="mr-1" /> Back to Scholarships
-        </Link>
       </div>
     );
   }
 
   if (!scholarship) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="bg-yellow-50 p-4 rounded-md text-yellow-700 mb-6">
-          <p>Scholarship not found</p>
+      <div className="admin-page">
+        <div className="admin-card">
+          <p className="text-amber-700 mb-4">Scholarship not found</p>
+          <Link to="/admin/scholarships" className="admin-button admin-button-secondary">
+            <FiChevronLeft /> Back to Scholarships
+          </Link>
         </div>
-        <Link to="/admin/scholarships" className="text-blue-500 flex items-center">
-          <FiChevronLeft className="mr-1" /> Back to Scholarships
-        </Link>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <Link to="/admin/scholarships" className="text-blue-500 flex items-center mb-4">
-        <FiChevronLeft className="mr-1" /> Back to Scholarships
+    <div className="admin-page">
+      <Link to="/admin/scholarships" className="donor-back-link mb-6">
+        <FiChevronLeft /> Back to Scholarships
       </Link>
       
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex justify-between items-start mb-4">
-          <h1 className="text-2xl font-bold">{scholarship.title}</h1>
-          <div>
-            <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold 
-              ${scholarship.status === 'active' ? 'bg-green-100 text-green-800' : 
-                scholarship.status === 'rejected' ? 'bg-red-100 text-red-800' : 
-                scholarship.status === 'pending_approval' ? 'bg-yellow-100 text-yellow-800' : 
-                'bg-gray-100 text-gray-800'}`}
-            >
-              {scholarship.status}
-            </span>
+      <div className="flex justify-between items-start mb-8">
+        <h1 className="admin-page-title mb-0">{scholarship.title}</h1>
+        <span className={`admin-badge admin-badge-${scholarship.status?.toLowerCase() || 'inactive'}`}>
+          {scholarship.status}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Scholarship details card */}
+        <div className="admin-card">
+          <h2 className="admin-card-title">Scholarship Details</h2>
+          <div className="space-y-6">
+            <div className="flex items-start">
+              <FiDollarSign className="scholarship-detail-icon mt-1" />
+              <div>
+                <div className="scholarship-detail-label">Award Amount</div>
+                <div className="scholarship-detail-value">${scholarship.amount?.toLocaleString() || 0}</div>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <FiCalendar className="scholarship-detail-icon mt-1" />
+              <div>
+                <div className="scholarship-detail-label">Application Deadline</div>
+                <div className="scholarship-detail-value">{new Date(scholarship.deadlineDate).toLocaleDateString()}</div>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <FiBookOpen className="scholarship-detail-icon mt-1" />
+              <div>
+                <div className="scholarship-detail-label">Category</div>
+                <div className="scholarship-detail-value">{scholarship.category}</div>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <FiUser className="scholarship-detail-icon mt-1" />
+              <div>
+                <div className="scholarship-detail-label">Created By</div>
+                <div className="scholarship-detail-value">{scholarship.creator?.name || scholarship.createdByName || 'Unknown'}</div>
+              </div>
+            </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="flex items-center">
-            <FiDollarSign className="text-gray-500 mr-2" />
-            <span className="text-lg font-semibold">${scholarship.amount?.toLocaleString() || 0}</span>
-          </div>
-          <div className="flex items-center">
-            <FiCalendar className="text-gray-500 mr-2" />
-            <span>Deadline: {new Date(scholarship.deadlineDate).toLocaleDateString()}</span>
-          </div>
-          <div className="flex items-center">
-            <FiBookOpen className="text-gray-500 mr-2" />
-            <span>{scholarship.category}</span>
-          </div>
-          <div className="flex items-center">
-            <FiUser className="text-gray-500 mr-2" />
-            <span>{scholarship.creator?.name || scholarship.createdByName || 'Unknown'}</span>
+        {/* Description card */}
+        <div className="admin-card">
+          <h2 className="admin-card-title">Description</h2>
+          <p className="scholarship-description">{scholarship.description}</p>
+        </div>
+        
+        {/* Eligibility Requirements card */}
+        <div className="admin-card">
+          <h2 className="admin-card-title">Eligibility Requirements</h2>
+          <div className="scholarship-requirements">
+            {scholarship.eligibilityRequirements}
           </div>
         </div>
         
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Description</h2>
-          <p className="text-gray-700">{scholarship.description}</p>
-        </div>
-        
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Eligibility Requirements</h2>
-          <p className="text-gray-700">{scholarship.eligibilityRequirements}</p>
-        </div>
-        
+        {/* Review card - only shown for pending approval */}
         {scholarship.status === 'pending_approval' && (
-          <div className="border-t pt-4 mt-4">
-            <h2 className="text-xl font-semibold mb-2">Review Scholarship</h2>
+          <div className="admin-card">
+            <h2 className="admin-card-title">Review Scholarship</h2>
             {showReviewForm ? (
-              <form onSubmit={handleReviewSubmit} className="space-y-4">
+              <form onSubmit={handleReviewSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-gray-700 mb-2">Decision:</label>
-                  <div className="flex space-x-4">
+                  <label className="block text-gray-700 mb-3 font-medium">Decision:</label>
+                  <div className="flex flex-wrap gap-4">
                     <button 
                       type="button" 
                       onClick={() => setReviewStatus('approved')}
-                      className={`px-4 py-2 rounded flex items-center ${
+                      className={
                         reviewStatus === 'approved' 
-                          ? 'bg-green-500 text-white' 
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
+                          ? 'admin-button admin-button-success' 
+                          : 'admin-button admin-button-secondary'
+                      }
                     >
-                      <FiCheck className="mr-2" /> Approve
+                      <FiCheck /> Approve
                     </button>
                     <button 
                       type="button" 
                       onClick={() => setReviewStatus('rejected')}
-                      className={`px-4 py-2 rounded flex items-center ${
+                      className={
                         reviewStatus === 'rejected' 
-                          ? 'bg-red-500 text-white' 
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
+                          ? 'admin-button admin-button-danger' 
+                          : 'admin-button admin-button-secondary'
+                      }
                     >
-                      <FiX className="mr-2" /> Reject
+                      <FiX /> Reject
                     </button>
                   </div>
                 </div>
                 
                 {reviewStatus === 'rejected' && (
                   <div>
-                    <label className="block text-gray-700 mb-2">Reason for Rejection:</label>
+                    <label className="block scholarship-detail-label mb-2">
+                      Reason for Rejection:
+                    </label>
                     <textarea
                       value={rejectionReason}
                       onChange={(e) => setRejectionReason(e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition duration-200"
                       rows="3"
                       placeholder="Explain why this scholarship is being rejected"
                       required
@@ -204,37 +224,43 @@ const AdminScholarshipView = () => {
                   </div>
                 )}
                 
-                <div className="flex space-x-4">
+                <div className="flex flex-wrap gap-4 pt-2">
                   <button 
                     type="submit" 
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    className="admin-button admin-button-primary"
                   >
                     Submit Review
                   </button>
                   <button 
                     type="button" 
                     onClick={() => setShowReviewForm(false)}
-                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+                    className="admin-button admin-button-secondary"
                   >
                     Cancel
                   </button>
                 </div>
               </form>
             ) : (
-              <button 
-                onClick={() => setShowReviewForm(true)}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              >
-                Review This Scholarship
-              </button>
+              <div className="text-center py-4">
+                <p className="mb-4 text-gray-600">Please review this scholarship before it becomes visible to students.</p>
+                <button 
+                  onClick={() => setShowReviewForm(true)}
+                  className="admin-button admin-button-primary"
+                >
+                  Review This Scholarship
+                </button>
+              </div>
             )}
           </div>
         )}
         
+        {/* Rejection Reason card - only shown for rejected scholarships */}
         {scholarship.status === 'rejected' && scholarship.rejectionReason && (
-          <div className="border-t pt-4 mt-4">
-            <h2 className="text-xl font-semibold mb-2">Rejection Reason</h2>
-            <p className="text-red-700 bg-red-50 p-3 rounded">{scholarship.rejectionReason}</p>
+          <div className="admin-card">
+            <h2 className="admin-card-title">Rejection Reason</h2>
+            <div className="bg-red-50 p-5 border-l-4 border-red-500 rounded text-red-700">
+              {scholarship.rejectionReason}
+            </div>
           </div>
         )}
       </div>

@@ -12,8 +12,10 @@ import {
   FiDollarSign,
   FiMail,
   FiAlertCircle,
-  FiLoader
+  FiLoader,
+  FiArrowLeft
 } from 'react-icons/fi';
+import '../../styles/studentDetail.css';
 
 const StudentDetail = () => {
   const { studentId } = useParams();
@@ -85,31 +87,32 @@ const StudentDetail = () => {
   
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <FiLoader className="animate-spin h-8 w-8 text-blue-500" />
-        <p className="ml-2">Loading student details...</p>
+      <div className="student-detail-page">
+        <div className="student-detail-loading">
+          <div className="student-detail-loading-spinner"></div>
+        </div>
       </div>
     );
   }
   
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-md">
-        <p className="flex items-center">
-          <FiAlertCircle className="mr-2" />
+      <div className="student-detail-page">
+        <div className="student-detail-error">
+          <FiAlertCircle />
           {error}
-        </p>
+        </div>
       </div>
     );
   }
   
   if (!student) {
     return (
-      <div className="p-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md">
-        <p className="flex items-center">
-          <FiAlertCircle className="mr-2" />
+      <div className="student-detail-page">
+        <div className="student-detail-error">
+          <FiAlertCircle />
           Student not found.
-        </p>
+        </div>
       </div>
     );
   }
@@ -137,73 +140,67 @@ const StudentDetail = () => {
     displayedApplications = student.scholarshipApplications || [];
   }
   
-  const getStatusClass = (status) => {
-    switch(status) {
-      case 'approved': return 'text-green-600';
-      case 'rejected': return 'text-red-600';
-      case 'pending': return 'text-yellow-600';
-      case 'funded': return 'text-blue-600';
-      default: return 'text-gray-600';
-    }
-  };
-  
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6">Student Profile</h1>
+    <div className="student-detail-page">
+      <div className="student-detail-header">
+        <h1 className="student-detail-title">Student Profile</h1>
+      </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="student-detail-grid">
         {/* Student Profile */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-center mb-6">
-              <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                <FiUser className="text-blue-500 text-4xl" />
+        <div>
+          <div className="student-detail-card">
+            <div className="student-detail-profile">
+              <div className="student-detail-avatar">
+                {student.firstName ? student.firstName.charAt(0).toUpperCase() : "S"}
               </div>
-              <h2 className="text-xl font-semibold">{student.firstName} {student.lastName}</h2>
-              <p className="text-gray-600 flex items-center justify-center mt-1">
-                <FiMail className="mr-1" />
+              <h2 className="student-detail-name">{student.firstName} {student.lastName}</h2>
+              <div className="student-detail-info">
+                <FiMail />
                 {student.email}
-              </p>
-              <p className="text-gray-600 flex items-center justify-center mt-1">
-                <FiMapPin className="mr-1" />
-                {student.location || 'No location provided'}
-              </p>
+              </div>
+              {student.location && (
+                <div className="student-detail-info">
+                  <FiMapPin />
+                  {student.location}
+                </div>
+              )}
             </div>
             
-            <div className="border-t pt-4">
-              <h3 className="font-semibold mb-2">Academic Information</h3>
-              <div className="grid grid-cols-1 gap-2">
-                <div>
-                  <p className="text-gray-600 text-sm">Institution</p>
-                  <p className="font-medium flex items-center">
-                    <FiBook className="mr-1" />
+            <div className="student-detail-section">
+              <h3 className="student-detail-section-title">Academic Information</h3>
+              <div className="student-detail-academic-grid">
+                <div className="student-detail-academic-item">
+                  <div className="student-detail-label">Institution</div>
+                  <div className="student-detail-value">
+                    <FiBook />
                     {student.institution}
-                  </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-gray-600 text-sm">Program</p>
-                  <p className="font-medium">{student.program}</p>
+                <div className="student-detail-academic-item">
+                  <div className="student-detail-label">Program</div>
+                  <div className="student-detail-value">{student.program}</div>
                 </div>
-                <div>
-                  <p className="text-gray-600 text-sm">Graduation Year</p>
-                  <p className="font-medium flex items-center">
-                    <FiCalendar className="mr-1" />
+                <div className="student-detail-academic-item">
+                  <div className="student-detail-label">Graduation Year</div>
+                  <div className="student-detail-value">
+                    <FiCalendar />
                     {student.graduationYear || 'Not specified'}
-                  </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-gray-600 text-sm">GPA</p>
-                  <p className="font-medium">{student.currentGPA || 'Not specified'}</p>
+                <div className="student-detail-academic-item">
+                  <div className="student-detail-label">GPA</div>
+                  <div className="student-detail-value">{student.currentGPA || 'Not specified'}</div>
                 </div>
               </div>
             </div>
             
             {student.achievements && student.achievements.length > 0 && (
-              <div className="border-t mt-4 pt-4">
-                <h3 className="font-semibold mb-2">Achievements</h3>
-                <ul className="list-disc list-inside">
+              <div className="student-detail-section">
+                <h3 className="student-detail-section-title">Achievements</h3>
+                <ul className="student-detail-achievements">
                   {student.achievements.map((achievement, index) => (
-                    <li key={index} className="text-gray-700 mb-1">{achievement}</li>
+                    <li key={index}>{achievement}</li>
                   ))}
                 </ul>
               </div>
@@ -212,19 +209,23 @@ const StudentDetail = () => {
         </div>
         
         {/* Scholarship Applications */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">Scholarship Applications</h2>
+        <div>
+          <div className="student-detail-card">
+            <h2 className="student-detail-section-title">Scholarship Applications</h2>
             
             {displayedApplications.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <FiFileText className="mx-auto text-gray-400 text-4xl mb-2" />
-                <p>{isDonor 
-                  ? "This student doesn't have any approved scholarships available for funding."
-                  : "This student hasn't submitted any scholarship applications."}</p>
+              <div className="student-detail-empty">
+                <div className="student-detail-empty-icon">
+                  <FiFileText />
+                </div>
+                <p className="student-detail-empty-text">
+                  {isDonor 
+                    ? "This student doesn't have any approved scholarships available for funding."
+                    : "This student hasn't submitted any scholarship applications."}
+                </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div>
                 {displayedApplications.map(application => {
                   // Extract scholarship info differently based on where it is in the object
                   const scholarshipInfo = application.scholarship || {};
@@ -235,49 +236,52 @@ const StudentDetail = () => {
                   return (
                     <div 
                       key={application._id} 
-                      className="border rounded-lg p-4 transition-all hover:shadow-md"
+                      className="student-detail-application"
                     >
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                          <h3 className="font-semibold text-lg">
+                      <div className="student-detail-app-header">
+                        <div className="student-detail-app-info">
+                          <h3 className="student-detail-app-title">
                             {scholarshipTitle}
                           </h3>
-                          <p className="text-gray-600 flex items-center mt-1">
-                            <FiCalendar className="mr-1" />
+                          <div className="student-detail-app-meta">
+                            <FiCalendar />
                             Applied: {new Date(application.appliedAt).toLocaleDateString()}
-                          </p>
-                          <p className="text-gray-600 flex items-center mt-1">
-                            <FiAward className="mr-1" />
-                            Status: <span className={`ml-1 ${getStatusClass(application.status)} font-medium`}>{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
-                          </p>
+                          </div>
+                          <div className="student-detail-app-meta">
+                            <FiAward />
+                            Status: <span className={`student-detail-status student-detail-status-${application.status}`}>
+                              {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+                            </span>
+                          </div>
                           {scholarshipAmount > 0 && (
-                            <p className="text-gray-600 flex items-center mt-1">
-                              <FiDollarSign className="mr-1" />
-                              Amount: <span className="ml-1 font-medium">
+                            <div className="student-detail-app-meta">
+                              <FiDollarSign />
+                              Amount: <span style={{fontWeight: '500', marginLeft: '4px'}}>
                                 {new Intl.NumberFormat('en-US', {
                                   style: 'currency',
                                   currency: 'USD'
                                 }).format(scholarshipAmount)}
                               </span>
-                            </p>
+                            </div>
+                          )}
+                          
+                          {isDonor && application.status === 'approved' && (
+                            <button
+                              onClick={() => handleFundScholarship(scholarshipId)}
+                              className="student-detail-fund-btn"
+                            >
+                              <FiDollarSign />
+                              Fund Scholarship
+                            </button>
                           )}
                         </div>
                         
-                        {isDonor && application.status === 'approved' && (
-                          <button
-                            onClick={() => handleFundScholarship(scholarshipId)}
-                            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center"
-                          >
-                            <FiDollarSign className="mr-2" />
-                            Fund Scholarship
-                          </button>
-                        )}
                       </div>
                       
                       {application.statement && (
-                        <div className="mt-3">
-                          <h4 className="font-medium">Personal Statement</h4>
-                          <p className="text-gray-700 text-sm mt-1">{application.statement}</p>
+                        <div className="student-detail-statement">
+                          <h4 className="student-detail-statement-title">Personal Statement</h4>
+                          <p className="student-detail-statement-content">{application.statement}</p>
                         </div>
                       )}
                     </div>
@@ -287,27 +291,22 @@ const StudentDetail = () => {
             )}
           </div>
           
-          <div className="bg-white rounded-lg shadow p-6 mt-6">
-            <h2 className="text-xl font-semibold mb-2">Financial Need</h2>
-            <p className="text-gray-700">
-              {student.financialNeedStatement || 'No financial need statement provided.'}
-            </p>
-          </div>
-          
-          <div className="mt-6">
+          <div>
             {isDonor ? (
               <Link 
                 to="/donor/students" 
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="student-detail-back-link"
               >
-                ← Back to Students
+                <FiArrowLeft />
+                Back to Students
               </Link>
             ) : (
               <Link 
                 to="/admin/students" 
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="student-detail-back-link"
               >
-                ← Back to Students
+                <FiArrowLeft />
+                Back to Students
               </Link>
             )}
           </div>

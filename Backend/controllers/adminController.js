@@ -42,6 +42,7 @@ exports.getStudentById = userController.getStudentById;
 // Re-export profile functions
 exports.getProfile = profileController.getProfile;
 exports.updateProfile = profileController.updateProfile;
+exports.changePassword = profileController.changePassword;
 exports.getActivityLog = profileController.getActivityLog;
 
 // Re-export payment functions

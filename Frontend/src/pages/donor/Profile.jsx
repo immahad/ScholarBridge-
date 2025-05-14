@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthUtils';
 import axios from 'axios';
+import { FiUser, FiMail, FiPhone, FiEdit, FiX, FiBriefcase, FiInfo } from 'react-icons/fi';
+import '../../styles/donor-profile.css';
 
 const DonorProfile = () => {
   const { user, token } = useAuth();
@@ -106,136 +108,198 @@ const DonorProfile = () => {
   };
 
   if (loading) {
-    return <div className="container mx-auto p-4 text-center">Loading profile...</div>;
+    return (
+      <div className="donor-profile-page">
+        <div className="donor-profile-loading">
+          <div className="donor-profile-loading-spinner"></div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="container mx-auto p-4 text-center text-red-500">Error: {error}</div>;
+    return (
+      <div className="donor-profile-page">
+        <div className="donor-profile-error">{error}</div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Donor Profile</h1>
+    <div className="donor-profile-page">
+      <div className="donor-profile-header">
+        <h1 className="donor-profile-title">Donor Profile</h1>
+      </div>
       
       {isEditing ? (
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow">
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Name</label>
-            <input
-              type="text"
-              name="firstName"
-              placeholder="First Name"
-              value={formData.firstName || ''}
-              onChange={handleChange}
-              className="w-full p-2 border rounded mb-2"
-            />
-            <input
-              type="text"
-              name="lastName"
-              placeholder="Last Name"
-              value={formData.lastName || ''}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email || ''}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Organization</label>
-            <input
-              type="text"
-              name="organizationName"
-              value={formData.organizationName || ''}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Bio</label>
-            <textarea
-              name="bio"
-              value={formData.bio}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-              rows="4"
-            ></textarea>
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Contact Phone</label>
-            <input
-              type="tel"
-              name="phoneNumber"
-              value={formData.phoneNumber || ''}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <button 
-              type="submit" 
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              disabled={submitLoading}
-            >
-              {submitLoading ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button 
-              type="button" 
-              className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
-              onClick={() => {
-                setFormData(profile);
-                setIsEditing(false);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <div className="donor-profile-card">
+          <form onSubmit={handleSubmit}>
+            <div className="donor-profile-avatar">
+              {profile.firstName ? profile.firstName.charAt(0).toUpperCase() : "D"}
+            </div>
+            
+            <div className="donor-profile-form-group">
+              <label className="donor-profile-form-label">First Name</label>
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName || ''}
+                onChange={handleChange}
+                className="donor-profile-form-input"
+              />
+            </div>
+            
+            <div className="donor-profile-form-group">
+              <label className="donor-profile-form-label">Last Name</label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName || ''}
+                onChange={handleChange}
+                className="donor-profile-form-input"
+              />
+            </div>
+            
+            <div className="donor-profile-form-group">
+              <label className="donor-profile-form-label">Email</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email || ''}
+                onChange={handleChange}
+                className="donor-profile-form-input"
+              />
+            </div>
+            
+            <div className="donor-profile-form-group">
+              <label className="donor-profile-form-label">Organization</label>
+              <input
+                type="text"
+                name="organizationName"
+                value={formData.organizationName || ''}
+                onChange={handleChange}
+                className="donor-profile-form-input"
+              />
+            </div>
+            
+            <div className="donor-profile-form-group">
+              <label className="donor-profile-form-label">Bio</label>
+              <textarea
+                name="bio"
+                value={formData.bio || ''}
+                onChange={handleChange}
+                className="donor-profile-form-textarea"
+                rows="4"
+              ></textarea>
+            </div>
+            
+            <div className="donor-profile-form-group">
+              <label className="donor-profile-form-label">Contact Phone</label>
+              <input
+                type="tel"
+                name="phoneNumber"
+                value={formData.phoneNumber || ''}
+                onChange={handleChange}
+                className="donor-profile-form-input"
+              />
+            </div>
+            
+            <div className="donor-profile-form-group">
+              <label className="donor-profile-form-label">Donor Type</label>
+              <select
+                name="donorType"
+                value={formData.donorType || 'individual'}
+                onChange={handleChange}
+                className="donor-profile-form-select"
+              >
+                <option value="individual">Individual</option>
+                <option value="organization">Organization</option>
+                <option value="corporate">Corporate</option>
+              </select>
+            </div>
+            
+            <div className="donor-profile-actions">
+              <button 
+                type="submit" 
+                className="donor-profile-btn donor-profile-btn-primary"
+                disabled={submitLoading}
+              >
+                {submitLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+              <button 
+                type="button" 
+                className="donor-profile-btn donor-profile-btn-secondary"
+                onClick={() => {
+                  setFormData(profile);
+                  setIsEditing(false);
+                }}
+              >
+                <FiX />
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       ) : (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="mb-4">
-            <h2 className="text-gray-500 text-sm">Name</h2>
-            <p className="font-medium">{`${profile.firstName || ''} ${profile.lastName || ''}`.trim()}</p>
+        <div className="donor-profile-card">
+          <div className="donor-profile-avatar">
+            {profile.firstName ? profile.firstName.charAt(0).toUpperCase() : "D"}
           </div>
           
-          <div className="mb-4">
-            <h2 className="text-gray-500 text-sm">Email</h2>
-            <p className="font-medium">{profile.email || 'N/A'}</p>
+          <h2 className="donor-profile-name">
+            {`${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Donor'}
+          </h2>
+          
+          <p className="donor-profile-email">{profile.email}</p>
+          
+          <div className="donor-profile-section">
+            <span className="donor-profile-label">
+              <FiBriefcase className="mr-2" />
+              Organization
+            </span>
+            <div className="donor-profile-value">
+              {profile.organizationName || 'Not specified'}
+            </div>
           </div>
           
-          <div className="mb-4">
-            <h2 className="text-gray-500 text-sm">Organization</h2>
-            <p className="font-medium">{profile.organizationName || 'N/A'}</p>
+          <div className="donor-profile-section">
+            <span className="donor-profile-label">
+              <FiInfo className="mr-2" />
+              Bio
+            </span>
+            <div className="donor-profile-value">
+              {profile.bio || 'No bio provided.'}
+            </div>
           </div>
           
-          <div className="mb-4">
-            <h2 className="text-gray-500 text-sm">Bio</h2>
-            <p className="font-medium">{profile.bio}</p>
+          <div className="donor-profile-section">
+            <span className="donor-profile-label">
+              <FiPhone className="mr-2" />
+              Contact Phone
+            </span>
+            <div className="donor-profile-value">
+              {profile.phoneNumber || 'Not provided'}
+            </div>
           </div>
           
-          <div className="mb-4">
-            <h2 className="text-gray-500 text-sm">Contact Phone</h2>
-            <p className="font-medium">{profile.phoneNumber || 'N/A'}</p>
+          <div className="donor-profile-section">
+            <span className="donor-profile-label">Donor Type</span>
+            <div className="donor-profile-value">
+              {profile.donorType === 'individual' ? 'Individual' : 
+               profile.donorType === 'organization' ? 'Organization' : 
+               profile.donorType === 'corporate' ? 'Corporate' : 'Not specified'}
+            </div>
           </div>
           
-          <button 
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            onClick={() => setIsEditing(true)}
-          >
-            Edit Profile
-          </button>
+          <div className="donor-profile-actions">
+            <button 
+              className="donor-profile-btn donor-profile-btn-primary"
+              onClick={() => setIsEditing(true)}
+            >
+              <FiEdit />
+              Edit Profile
+            </button>
+          </div>
         </div>
       )}
     </div>

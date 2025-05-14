@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthUtils';
-import { FiPlusCircle, FiEye, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { FiPlusCircle, FiEye, FiEdit, FiTrash2, FiLoader, FiAlertCircle } from 'react-icons/fi';
+import '../../styles/donor.css';
 
 const DonorScholarships = () => {
   const { token } = useAuth();
@@ -49,82 +50,91 @@ const DonorScholarships = () => {
     ...scholarships.rejected.map(s => ({ ...s, statusLabel: 'Rejected' })),
     ...scholarships.closed.map(s => ({ ...s, statusLabel: 'Closed' }))
   ];
+  
+  const getBadgeClass = (status) => {
+    switch(status) {
+      case 'Active':
+        return 'donor-badge donor-badge-success';
+      case 'Pending Approval':
+        return 'donor-badge donor-badge-pending';
+      case 'Rejected':
+        return 'donor-badge donor-badge-error';
+      default:
+        return 'donor-badge';
+    }
+  };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Scholarships</h1>
-        <Link to="/donor/scholarships/create" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center">
-          <FiPlusCircle className="mr-2" /> Create New Scholarship
-        </Link>
-      </div>
-      
-      {loading ? (
-        <div>Loading scholarships...</div>
-      ) : error ? (
-        <div className="bg-red-50 p-4 rounded-md text-red-800">
-          <p>{error}</p>
+    <div className="donor-page">
+      <div className="container">
+        <div className="donor-page-header">
+          <div className="scholarship-status-header">
+            <h1 className="donor-page-title">My Scholarships</h1>
+            <Link to="/donor/scholarships/create" className="scholarship-create-btn">
+              <FiPlusCircle /> Create New Scholarship
+            </Link>
+          </div>
         </div>
-      ) : allScholarships.length === 0 ? (
-        <div className="bg-gray-50 p-4 rounded-md">
-          <p>You haven't created any scholarships yet.</p>
-          <Link to="/donor/scholarships/create" className="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 inline-block">
-            Create Your First Scholarship
-          </Link>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white">
-            <thead>
-              <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                <th className="py-3 px-6 text-left">Scholarship Name</th>
-                <th className="py-3 px-6 text-left">Amount</th>
-                <th className="py-3 px-6 text-left">Deadline</th>
-                <th className="py-3 px-6 text-left">Applicants</th>
-                <th className="py-3 px-6 text-left">Status</th>
-                <th className="py-3 px-6 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-600 text-sm">
-              {allScholarships.map((scholarship) => (
-                <tr key={scholarship._id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="py-3 px-6 text-left">{scholarship.title}</td>
-                  <td className="py-3 px-6 text-left">${scholarship.amount.toLocaleString()}</td>
-                  <td className="py-3 px-6 text-left">
-                    {new Date(scholarship.deadlineDate).toLocaleDateString()}
-                  </td>
-                  <td className="py-3 px-6 text-left">{scholarship.applicantCount || 0}</td>
-                  <td className="py-3 px-6 text-left">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      scholarship.statusLabel === 'Active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : scholarship.statusLabel === 'Pending Approval'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : scholarship.statusLabel === 'Rejected'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {scholarship.statusLabel}
-                    </span>
-                  </td>
-                  <td className="py-3 px-6 text-center">
-                    <div className="flex item-center justify-center gap-2">
-                      <Link to={`/donor/scholarships/${scholarship._id}`} className="text-blue-500 hover:text-blue-700">
-                        <FiEye />
-                      </Link>
-                      {scholarship.applicantCount === 0 && (
-                        <button className="text-red-500 hover:text-red-700">
-                          <FiTrash2 />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+        
+        {loading ? (
+          <div className="donor-card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <FiLoader className="animate-spin" size={24} style={{ marginBottom: '10px', display: 'inline-block' }} />
+            <p>Loading scholarships...</p>
+          </div>
+        ) : error ? (
+          <div className="donor-card">
+            <div className="donor-badge donor-badge-error" style={{ margin: '10px 0' }}>
+              <FiAlertCircle /> {error}
+            </div>
+          </div>
+        ) : allScholarships.length === 0 ? (
+          <div className="empty-state">
+            <p>You haven't created any scholarships yet.</p>
+            <Link to="/donor/scholarships/create" className="scholarship-create-btn">
+              Create Your First Scholarship
+            </Link>
+          </div>
+        ) : (
+          <div className="scholarships-table-container">
+            <table className="scholarships-table">
+              <thead>
+                <tr>
+                  <th>Scholarship Name</th>
+                  <th>Amount</th>
+                  <th>Deadline</th>
+                  <th>Applicants</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {allScholarships.map((scholarship) => (
+                  <tr key={scholarship._id}>
+                    <td>{scholarship.title}</td>
+                    <td>${scholarship.amount.toLocaleString()}</td>
+                    <td>
+                      {new Date(scholarship.deadlineDate).toLocaleDateString()}
+                    </td>
+                    <td>{scholarship.applicantCount || 0}</td>
+                    <td>
+                      <span className={getBadgeClass(scholarship.statusLabel)}>
+                        {scholarship.statusLabel}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="scholarship-actions">
+                        <Link to={`/donor/scholarships/${scholarship._id}`} className="scholarship-action-btn">
+                          <FiEye size={18} />
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

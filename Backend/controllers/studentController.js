@@ -297,6 +297,8 @@ exports.deleteEducation = asyncHandler(async (req, res) => {
 exports.getAvailableScholarships = asyncHandler(async (req, res) => {
   const studentId = req.user._id;
   
+  console.log(`Fetching available scholarships for student ${studentId}`);
+  
   // Get student to check profile completion and existing applications
   const student = await Student.findById(studentId);
   
@@ -304,26 +306,64 @@ exports.getAvailableScholarships = asyncHandler(async (req, res) => {
     throw createError('Student profile not found', 404);
   }
   
+  // First check how many scholarships exist in total
+  const totalScholarships = await Scholarship.countDocuments({});
+  console.log(`Total scholarships in database: ${totalScholarships}`);
+  
   // Pagination
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  const limit = parseInt(req.query.limit) || 20; // Changed from 100 to 20 for testing pagination
   const skip = (page - 1) * limit;
   
-  // Find active scholarships (only active and visible ones)
-  const scholarships = await Scholarship.find({
+  const query = {
     status: 'active',
     deadlineDate: { $gt: new Date() },
     visible: true
-  })
-    .skip(skip)
-    .limit(limit);
+  };
   
-  // Count total scholarships
-  const total = await Scholarship.countDocuments({
-    status: 'active',
-    deadlineDate: { $gt: new Date() },
-    visible: true
-  });
+  console.log(`Scholarship query:`, JSON.stringify(query));
+  
+  // Find active scholarships (only active and visible ones)
+  let scholarshipQuery = Scholarship.find(query);
+  
+  // Only apply pagination if explicitly requested and nopage is not set to true
+  const noPagination = req.query.nopage === 'true';
+  if (!noPagination && (req.query.page || req.query.limit)) {
+    console.log(`Applying pagination: page=${page}, limit=${limit}, skip=${skip}`);
+    scholarshipQuery = scholarshipQuery.skip(skip).limit(limit);
+  } else if (noPagination) {
+    console.log('Skipping pagination as nopage=true');
+  }
+  
+  const scholarships = await scholarshipQuery;
+  
+  console.log(`Found ${scholarships.length} scholarships matching criteria`);
+  
+  // If no scholarships found, fetch all scholarships to debug
+  const activeScholarships = await Scholarship.countDocuments({ status: 'active' });
+  const visibleScholarships = await Scholarship.countDocuments({ visible: true });
+  const futureDeadlines = await Scholarship.countDocuments({ deadlineDate: { $gt: new Date() } });
+  const activeAndVisible = await Scholarship.countDocuments({ status: 'active', visible: true });
+  
+  console.log('Debug scholarship counts:');
+  console.log(`- Active scholarships: ${activeScholarships}`);
+  console.log(`- Visible scholarships: ${visibleScholarships}`);
+  console.log(`- Future deadlines: ${futureDeadlines}`);
+  console.log(`- Active and visible: ${activeAndVisible}`);
+  
+  if (scholarships.length === 0) {
+    // Get some sample scholarship data
+    const sample = await Scholarship.find({}).limit(5).select('_id title status visible deadlineDate');
+    console.log('Sample scholarships:', JSON.stringify(sample));
+  } else {
+    // Log the found scholarships
+    scholarships.forEach(s => {
+      console.log(`Scholarship: ${s.title}, ID: ${s._id}, Status: ${s.status}, Visible: ${s.visible}, Deadline: ${s.deadlineDate}`);
+    });
+  }
+  
+  // Count total scholarships matching the query
+  const total = await Scholarship.countDocuments(query);
   
   // Add a flag to indicate if student has already applied
   const scholarshipsWithAppliedFlag = scholarships.map(scholarship => {
