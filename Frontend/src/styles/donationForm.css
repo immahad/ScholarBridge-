@@ -1,0 +1,287 @@
+.donation-container {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 3rem 1rem;
+}
+
+.donation-wrapper {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.donation-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.donation-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1a202c;
+  margin-bottom: 0.5rem;
+}
+
+.donation-subtitle {
+  font-size: 1.125rem;
+  color: #4a5568;
+}
+
+.donation-card {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.card-header {
+  background-color: #2563eb;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.card-header h2 {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.card-header svg {
+  margin-right: 0.5rem;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.amount-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.amount-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.amount-button.active {
+  background-color: #2563eb;
+  color: white;
+}
+
+.amount-button:not(.active) {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.amount-button:not(.active):hover {
+  background-color: #e5e7eb;
+}
+
+.amount-input-wrapper {
+  position: relative;
+}
+
+.amount-input-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+}
+
+.amount-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  -moz-appearance: textfield;
+}
+
+/* Remove spinner arrows for Chrome, Safari, Edge, Opera */
+.amount-input::-webkit-outer-spin-button,
+.amount-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Remove spinner arrows for Firefox */
+.amount-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.amount-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.card-element-wrapper {
+  padding: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background-color: #f9fafb;
+}
+
+.security-text {
+  display: flex;
+  align-items: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.security-text svg {
+  margin-right: 0.25rem;
+}
+
+.anonymous-section {
+  background-color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-input {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.5rem;
+  border-color: #d1d5db;
+  border-radius: 0.25rem;
+}
+
+.checkbox-label {
+  color: #374151;
+}
+
+.anonymous-hint {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-left: 1.5rem;
+  margin-top: 0.25rem;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  color: white;
+  transition: background-color 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.submit-button:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.submit-button:not(:disabled):hover {
+  background-color: #1d4ed8;
+}
+
+.submit-button:disabled {
+  background-color: #93c5fd;
+  cursor: not-allowed;
+}
+
+.processing-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid white;
+  border-top-color: transparent;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.success-message {
+  padding: 1.5rem;
+  background-color: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  border-radius: 0.75rem;
+  text-align: center;
+}
+
+.success-icon {
+  color: #059669;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.error-message {
+  padding: 1rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.error-icon {
+  color: #dc2626;
+  margin-right: 0.5rem;
+}
+
+.footer-security {
+  text-align: center;
+  margin-top: 2rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.footer-security-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.footer-security-icon svg {
+  margin-right: 0.25rem;
+}
+
+@media (max-width: 640px) {
+  .donation-container {
+    padding: 1.5rem 1rem;
+  }
+
+  .amount-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+} 

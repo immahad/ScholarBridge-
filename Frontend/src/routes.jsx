@@ -40,6 +40,9 @@ import CreateScholarship from './pages/donor/CreateScholarship';
 import DonorScholarshipView from './pages/donor/ScholarshipView';
 import StudentDetail from './pages/donor/StudentDetail';
 import PaymentForm from './pages/donor/PaymentForm';
+import GeneralDonationForm from './pages/donor/GeneralDonationForm';
+import DonationSuccess from './pages/donor/DonationSuccess';
+import DonationCancel from './pages/donor/DonationCancel';
 
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -75,7 +78,9 @@ const router = createBrowserRouter([
       { path: 'resources', element: <ResourcesPage /> },
       { path: 'faqs', element: <FAQsPage /> },
       { path: 'privacy', element: <PrivacyPolicyPage /> },
-      { path: 'terms', element: <TermsOfServicePage /> },      // Auth routes
+      { path: 'terms', element: <TermsOfServicePage /> },
+      
+      // Auth routes
       { path: 'login', element: <LoginForm /> },
       { path: 'register', element: <RegisterForm /> },
       { path: 'forgot-password', element: <ForgotPassword /> },
@@ -100,6 +105,9 @@ const router = createBrowserRouter([
       { path: 'donor/students', element: <BrowseStudents /> },
       { path: 'donor/students/:studentId', element: <StudentDetail /> },
       { path: 'donor/fund-scholarship/:scholarshipId/:studentId', element: <PaymentForm /> },
+      { path: 'donor/payment', element: <GeneralDonationForm /> },
+      { path: 'donor/donation/success', element: <DonationSuccess /> },
+      { path: 'donor/donation/cancel', element: <DonationCancel /> },
       { path: 'donor/reports', element: <DonorReports /> },
       
       // Admin routes

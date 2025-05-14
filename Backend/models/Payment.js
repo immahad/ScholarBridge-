@@ -4,7 +4,7 @@ const { encrypt, decrypt } = require('../utils/encryption');
 
 /**
  * Payment Schema
- * Used for tracking scholarship payments made by donors
+ * Used for tracking scholarship payments and general donations made by donors
  */
 const paymentSchema = new mongoose.Schema({
   donorId: {
@@ -15,12 +15,23 @@ const paymentSchema = new mongoose.Schema({
   studentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Student',
-    required: [true, 'Student ID is required']
+    // Only required for scholarship donations
+    required: function() {
+      return this.type === 'scholarship_donation';
+    }
   },
   scholarshipId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Scholarship',
-    required: [true, 'Scholarship ID is required']
+    // Only required for scholarship donations
+    required: function() {
+      return this.type === 'scholarship_donation';
+    }
+  },
+  type: {
+    type: String,
+    enum: ['scholarship_donation', 'general_donation'],
+    default: 'scholarship_donation'
   },
   amount: {
     type: Number,
@@ -86,29 +97,10 @@ const paymentSchema = new mongoose.Schema({
 
 // Create indexes for common queries
 paymentSchema.index({ donorId: 1 });
-paymentSchema.index({ studentId: 1 });
-paymentSchema.index({ scholarshipId: 1 });
+paymentSchema.index({ type: 1 });
 paymentSchema.index({ status: 1 });
-paymentSchema.index({ paymentDate: -1 });
-paymentSchema.index({ transactionId: 1 }, { unique: true });
-paymentSchema.index({ donorId: 1, status: 1 });
-paymentSchema.index({ 'paymentDetails.cardLastFour': 1 });
-
-// Pre-save hook to set completedDate when status changes to completed
-paymentSchema.pre('save', function(next) {
-  if (this.isModified('status') && this.status === 'completed' && !this.completedDate) {
-    this.completedDate = new Date();
-  }
-  if (this.isModified('status')) {
-    this.history.push({
-      status: this.status,
-      date: new Date(),
-      updatedBy: this._updatedBy,
-      note: `Status changed to ${this.status}`
-    });
-  }
-  next();
-});
+paymentSchema.index({ paymentMethod: 1 });
+paymentSchema.index({ createdAt: 1 });
 
 // Create a payment with transaction support
 paymentSchema.statics.createPaymentWithTransaction = async function(paymentData) {
@@ -119,28 +111,30 @@ paymentSchema.statics.createPaymentWithTransaction = async function(paymentData)
     // Create payment
     const payment = await this.create([paymentData], { session });
     
-    // Update student scholarship application
-    const Student = mongoose.model('Student');
-    const student = await Student.findById(paymentData.studentId).session(session);
-    
-    if (!student) {
-      throw new Error('Student not found');
+    if (paymentData.type === 'scholarship_donation') {
+      // Update student scholarship application
+      const Student = mongoose.model('Student');
+      const student = await Student.findById(paymentData.studentId).session(session);
+      
+      if (!student) {
+        throw new Error('Student not found');
+      }
+      
+      const applicationIndex = student.scholarshipApplications.findIndex(
+        app => app.scholarshipId.toString() === paymentData.scholarshipId.toString()
+      );
+      
+      if (applicationIndex === -1) {
+        throw new Error('Scholarship application not found');
+      }
+      
+      // Update application status to funded
+      student.scholarshipApplications[applicationIndex].status = 'funded';
+      student.scholarshipApplications[applicationIndex].fundedBy = paymentData.donorId;
+      student.scholarshipApplications[applicationIndex].fundedAt = new Date();
+      
+      await student.save({ session });
     }
-    
-    const applicationIndex = student.scholarshipApplications.findIndex(
-      app => app.scholarshipId.toString() === paymentData.scholarshipId.toString()
-    );
-    
-    if (applicationIndex === -1) {
-      throw new Error('Scholarship application not found');
-    }
-    
-    // Update application status to funded
-    student.scholarshipApplications[applicationIndex].status = 'funded';
-    student.scholarshipApplications[applicationIndex].fundedBy = paymentData.donorId;
-    student.scholarshipApplications[applicationIndex].fundedAt = new Date();
-    
-    await student.save({ session });
     
     // Update donor donation history
     const Donor = mongoose.model('Donor');
@@ -160,7 +154,8 @@ paymentSchema.statics.createPaymentWithTransaction = async function(paymentData)
       status: paymentData.status,
       donationDate: new Date(),
       notes: paymentData.notes,
-      isAnonymous: paymentData.isAnonymous
+      isAnonymous: paymentData.isAnonymous,
+      type: paymentData.type
     });
     
     // Update total donated amount
@@ -168,28 +163,12 @@ paymentSchema.statics.createPaymentWithTransaction = async function(paymentData)
     
     await donor.save({ session });
     
-    // Update scholarship counts
-    const Scholarship = mongoose.model('Scholarship');
-    const scholarship = await Scholarship.findById(paymentData.scholarshipId).session(session);
-    
-    if (!scholarship) {
-      throw new Error('Scholarship not found');
-    }
-    
-    scholarship.fundedCount += 1;
-    
-    await scholarship.save({ session });
-    
-    // Commit transaction
     await session.commitTransaction();
-    
     return payment[0];
   } catch (error) {
-    // Abort transaction on error
     await session.abortTransaction();
     throw error;
   } finally {
-    // End session
     session.endSession();
   }
 };
@@ -335,7 +314,4 @@ paymentSchema.statics.getTopDonors = async function(limit = 10) {
   ]);
 };
 
-// Create Payment model
-const Payment = mongoose.model('Payment', paymentSchema);
-
-module.exports = Payment;
+module.exports = mongoose.model('Payment', paymentSchema);

@@ -1,7 +1,28 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthUtils';
+import { toast } from 'react-toastify';
 import '../styles/support.css';
 
 const SupportPage = () => {
+  const navigate = useNavigate();
+  const { token, role } = useAuth();
+
+  const handleDonateClick = () => {
+    if (!token) {
+      // If user is not logged in, redirect to login page with return URL
+      toast.info('Please log in to make a donation');
+      navigate('/login', { state: { from: '/donor/payment' } });
+    } else if (role !== 'donor') {
+      // If user is logged in but not a donor
+      toast.info('Please register as a donor to make donations');
+      navigate('/register', { state: { role: 'donor' } });
+    } else {
+      // User is logged in and is a donor
+      navigate('/donor/payment');
+    }
+  };
+
   return (
     <div className="support-page">
       <div className="container">
@@ -34,7 +55,7 @@ const SupportPage = () => {
             <div className="support-card">
               <h3>Make a Donation</h3>
               <p>Support our platform operations with a one-time or recurring donation.</p>
-              <button className="btn-primary">Donate Now</button>
+              <button onClick={handleDonateClick} className="btn-primary">Donate Now</button>
             </div>
             <div className="support-card">
               <h3>Partner with Us</h3>
