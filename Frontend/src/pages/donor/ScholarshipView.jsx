@@ -21,6 +21,8 @@ const DonorScholarshipView = () => {
         });
 
         if (response.data.success) {
+          console.log('DEBUG: Scholarship data received:', response.data.scholarship);
+          console.log('DEBUG: Criteria data received:', response.data.scholarship.criteria);
           setScholarship(response.data.scholarship);
         } else {
           setError('Failed to load scholarship details');
@@ -178,66 +180,6 @@ const DonorScholarshipView = () => {
             <p className="text-gray-700">{scholarship.eligibilityRequirements}</p>
           </div>
         </div>
-
-        {scholarship.criteria && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Academic Criteria</h2>
-              <div className="bg-gray-50 p-4 rounded">
-                <div className="mb-2">
-                  <span className="font-medium">Minimum GPA:</span> {scholarship.criteria.minGPA || 'Not specified'}
-                </div>
-                {scholarship.criteria.eligiblePrograms?.length > 0 && (
-                  <div className="mb-2">
-                    <span className="font-medium">Eligible Programs:</span>
-                    <ul className="list-disc list-inside mt-1">
-                      {scholarship.criteria.eligiblePrograms.map((program, index) => (
-                        <li key={index} className="text-gray-700">{program}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {scholarship.criteria.eligibleInstitutions?.length > 0 && (
-                  <div>
-                    <span className="font-medium">Eligible Institutions:</span>
-                    <ul className="list-disc list-inside mt-1">
-                      {scholarship.criteria.eligibleInstitutions.map((institution, index) => (
-                        <li key={index} className="text-gray-700">{institution}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Application Requirements</h2>
-              <div className="bg-gray-50 p-4 rounded">
-                {scholarship.criteria.requiredDocuments?.length > 0 && (
-                  <div className="mb-2">
-                    <span className="font-medium">Required Documents:</span>
-                    <ul className="list-disc list-inside mt-1">
-                      {scholarship.criteria.requiredDocuments.map((doc, index) => (
-                        <li key={index} className="text-gray-700">
-                          {doc.charAt(0).toUpperCase() + doc.slice(1)}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {scholarship.criteria.additionalCriteria?.length > 0 && (
-                  <div>
-                    <span className="font-medium">Additional Criteria:</span>
-                    <ul className="list-disc list-inside mt-1">
-                      {scholarship.criteria.additionalCriteria.map((criteria, index) => (
-                        <li key={index} className="text-gray-700">{criteria}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

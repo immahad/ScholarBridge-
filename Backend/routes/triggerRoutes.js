@@ -258,39 +258,52 @@ router.post('/triggers/scholarship-created', async (req, res) => {
     
     const { scholarshipId, fullDocument } = req.body;
     
-    // Get scholarship data
-    let scholarship;
-    if (fullDocument) {
-      scholarship = fullDocument;
-    } else if (scholarshipId) {
-      scholarship = await Scholarship.findById(scholarshipId);
-    } else {
-      return res.status(400).json({ success: false, message: 'No scholarship data provided' });
+    if (!scholarshipId) {
+      return res.status(400).json({ success: false, message: 'No scholarship ID provided' });
     }
+    
+    // Get scholarship data - always fetch from database to ensure we have the latest data
+    console.log(`Fetching scholarship with ID: ${scholarshipId}`);
+    const scholarship = await Scholarship.findById(scholarshipId);
     
     if (!scholarship) {
       return res.status(404).json({ success: false, message: 'Scholarship not found' });
     }
     
-    // Get donor data
-    const donor = await Donor.findById(scholarship.donorId);
-    if (!donor) {
-      return res.status(404).json({ success: false, message: 'Donor not found' });
+    console.log('Found scholarship:', scholarship);
+    
+    // Get donor data - using createdBy field
+    const creatorId = scholarship.createdBy;
+    if (!creatorId) {
+      return res.status(400).json({ success: false, message: 'Scholarship has no creator ID' });
     }
     
-    console.log(`Sending scholarship created email to donor: ${donor.email}`);
+    console.log('Looking up user with ID:', creatorId);
+    
+    // First check if the creator is a User
+    const user = await User.findById(creatorId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Creator not found' });
+    }
+    
+    console.log('Found user:', user);
+    
+    // Check if the user is a donor
+    if (user.role !== 'donor') {
+      return res.status(400).json({ success: false, message: 'Creator is not a donor' });
+    }
     
     // Send email notification
     const subject = "Scholarship Created Successfully";
     const html = `
       <h2>Scholarship Created Successfully</h2>
-      <p>Dear ${donor.firstName} ${donor.lastName},</p>
+      <p>Dear ${user.firstName} ${user.lastName},</p>
       <p>Thank you for creating a new scholarship on ScholarBridge!</p>
       <p>Your scholarship is currently pending approval by our administrative team. You'll receive another notification when it's approved and made available to students.</p>
       
       <h3>Scholarship Details:</h3>
       <ul>
-        <li><strong>Name:</strong> ${scholarship.name}</li>
+        <li><strong>Name:</strong> ${scholarship.title || scholarship.name}</li>
         <li><strong>Amount:</strong> $${scholarship.amount}</li>
         <li><strong>Status:</strong> Pending Approval</li>
       </ul>
@@ -299,7 +312,8 @@ router.post('/triggers/scholarship-created', async (req, res) => {
       <p>Best regards,<br>ScholarBridge Team</p>
     `;
     
-    const emailResult = await sendEmail(donor.email, subject, html);
+    console.log(`Sending scholarship created email to donor: ${user.email}`);
+    const emailResult = await sendEmail(user.email, subject, html);
     console.log('Email sending result:', emailResult);
     
     res.status(200).json({ 
@@ -347,34 +361,46 @@ router.post('/triggers/scholarship-status-updated', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Scholarship not found' });
     }
     
-    // Get donor data
-    const donor = await Donor.findById(scholarship.donorId);
-    if (!donor) {
-      return res.status(404).json({ success: false, message: 'Donor not found' });
+    // Get donor data - using createdBy field instead of donorId
+    const creatorId = scholarship.createdBy;
+    if (!creatorId) {
+      return res.status(400).json({ success: false, message: 'Scholarship has no creator ID' });
     }
     
-    console.log(`Sending scholarship status update email to donor: ${donor.email}, new status: ${newStatus}`);
+    // First check if the creator is a User
+    const user = await User.findById(creatorId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Creator not found' });
+    }
+    
+    // Check if the user is a donor
+    if (user.role !== 'donor') {
+      return res.status(400).json({ success: false, message: 'Creator is not a donor' });
+    }
+    
+    console.log(`Sending scholarship status update email to donor: ${user.email}, new status: ${newStatus}`);
     
     // Generate status-specific message
     let statusMessage = "";
     switch(newStatus.toLowerCase()) {
       case "approved":
+      case "active":
         statusMessage = `
-          <p>We're pleased to inform you that your scholarship "${scholarship.name}" has been approved!</p>
+          <p>We're pleased to inform you that your scholarship "${scholarship.title || scholarship.name}" has been approved!</p>
           <p>Your scholarship is now live on our platform and visible to eligible students.</p>
           <p>You'll receive notifications when students apply for this scholarship.</p>
         `;
         break;
       case "rejected":
         statusMessage = `
-          <p>We regret to inform you that your scholarship "${scholarship.name}" could not be approved.</p>
+          <p>We regret to inform you that your scholarship "${scholarship.title || scholarship.name}" could not be approved.</p>
           <p>Our administrative team has reviewed your submission and found that it doesn't meet our current guidelines.</p>
           <p>Please contact our support team for more information and assistance in creating a new scholarship.</p>
         `;
         break;
       case "closed":
         statusMessage = `
-          <p>Your scholarship "${scholarship.name}" has been closed.</p>
+          <p>Your scholarship "${scholarship.title || scholarship.name}" has been closed.</p>
           <p>This may be because all funds have been allocated or because the scholarship period has ended.</p>
           <p>You can view all funded students and their progress in your donor dashboard.</p>
         `;
@@ -390,12 +416,12 @@ router.post('/triggers/scholarship-status-updated', async (req, res) => {
     const subject = `Scholarship Status Update: ${newStatus.toUpperCase()}`;
     const html = `
       <h2>Scholarship Status Update</h2>
-      <p>Dear ${donor.firstName} ${donor.lastName},</p>
+      <p>Dear ${user.firstName} ${user.lastName},</p>
       ${statusMessage}
       <p>Scholarship details:</p>
       <ul>
         <li><strong>Scholarship ID:</strong> ${scholarship._id}</li>
-        <li><strong>Name:</strong> ${scholarship.name}</li>
+        <li><strong>Name:</strong> ${scholarship.title || scholarship.name}</li>
         <li><strong>Amount:</strong> $${scholarship.amount}</li>
         <li><strong>New Status:</strong> ${newStatus}</li>
       </ul>
@@ -403,7 +429,7 @@ router.post('/triggers/scholarship-status-updated', async (req, res) => {
       <p>Best regards,<br>ScholarBridge Team</p>
     `;
     
-    const emailResult = await sendEmail(donor.email, subject, html);
+    const emailResult = await sendEmail(user.email, subject, html);
     console.log('Email sending result:', emailResult);
     
     res.status(200).json({ 
@@ -413,6 +439,90 @@ router.post('/triggers/scholarship-status-updated', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in scholarship-status-updated trigger webhook:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Debug endpoint for scholarship creation
+ */
+router.get('/triggers/debug-scholarship-created/:scholarshipId', async (req, res) => {
+  try {
+    const { scholarshipId } = req.params;
+    
+    // Get scholarship data
+    const scholarship = await Scholarship.findById(scholarshipId);
+    
+    if (!scholarship) {
+      return res.status(404).json({ success: false, message: 'Scholarship not found' });
+    }
+    
+    // Get donor data - using createdBy field instead of donorId
+    const creatorId = scholarship.createdBy;
+    if (!creatorId) {
+      return res.status(400).json({ success: false, message: 'Scholarship has no creator ID' });
+    }
+    
+    // First check if the creator is a User
+    const user = await User.findById(creatorId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Creator not found' });
+    }
+    
+    // Check if the user is a donor
+    if (user.role !== 'donor') {
+      return res.status(400).json({ success: false, message: 'Creator is not a donor' });
+    }
+    
+    // Get the donor details
+    const donor = await Donor.findOne({ _id: creatorId });
+    if (!donor) {
+      return res.status(404).json({ success: false, message: 'Donor details not found' });
+    }
+    
+    // Send email notification
+    const subject = "Scholarship Created Successfully (Debug Test)";
+    const html = `
+      <h2>Scholarship Created Successfully</h2>
+      <p>Dear ${user.firstName} ${user.lastName},</p>
+      <p>Thank you for creating a new scholarship on ScholarBridge!</p>
+      <p>Your scholarship is currently pending approval by our administrative team. You'll receive another notification when it's approved and made available to students.</p>
+      
+      <h3>Scholarship Details:</h3>
+      <ul>
+        <li><strong>Name:</strong> ${scholarship.title || scholarship.name}</li>
+        <li><strong>Amount:</strong> $${scholarship.amount}</li>
+        <li><strong>Status:</strong> ${scholarship.status}</li>
+      </ul>
+      
+      <p>Thank you for your generosity and commitment to supporting education.</p>
+      <p>Best regards,<br>ScholarBridge Team</p>
+    `;
+    
+    const emailResult = await sendEmail(user.email, subject, html);
+    console.log('Debug email sending result:', emailResult);
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Debug email sent successfully',
+      scholarshipData: {
+        id: scholarship._id,
+        title: scholarship.title,
+        name: scholarship.name,
+        status: scholarship.status,
+        createdBy: scholarship.createdBy
+      },
+      userData: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role
+      },
+      emailResult
+    });
+  } catch (error) {
+    console.error('Error in debug endpoint:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

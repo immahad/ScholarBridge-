@@ -18,7 +18,7 @@ import {
 const StudentDetail = () => {
   const { studentId } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,12 +29,29 @@ const StudentDetail = () => {
       try {
         setLoading(true);
         
-        const response = await axios.get(`/api/students/${studentId}`, {
+        // Use different endpoint based on user role
+        const endpoint = user?.role === 'admin' 
+          ? `/api/admin/students/${studentId}` 
+          : `/api/students/${studentId}`;
+        
+        const response = await axios.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         if (response.data.success) {
-          setStudent(response.data.student);
+          const studentData = response.data.student;
+          
+          // Process scholarship applications to ensure titles are available
+          if (studentData.scholarshipApplications && studentData.scholarshipApplications.length > 0) {
+            studentData.scholarshipApplications = studentData.scholarshipApplications.map(app => {
+              return {
+                ...app,
+                scholarshipTitle: app.scholarshipTitle || app.scholarshipId?.title || 'N/A'
+              };
+            });
+          }
+          
+          setStudent(studentData);
         } else {
           setError('Failed to load student details');
         }
@@ -49,10 +66,20 @@ const StudentDetail = () => {
     if (token) {
       fetchStudentDetails();
     }
-  }, [studentId, token]);
+  }, [studentId, token, user]);
   
   const handleFundScholarship = (scholarshipId) => {
-    navigate(`/donor/fund-scholarship/${scholarshipId}/${studentId}`);
+    // Ensure we have a valid scholarshipId, either as a string or from an object
+    const validScholarshipId = typeof scholarshipId === 'object' 
+      ? scholarshipId._id || scholarshipId.toString()
+      : scholarshipId;
+      
+    console.log("Navigating to payment form with:", {
+      scholarshipId: validScholarshipId,
+      studentId
+    });
+    
+    navigate(`/donor/fund-scholarship/${validScholarshipId}/${studentId}`);
   };
   
   if (loading) {
@@ -86,10 +113,38 @@ const StudentDetail = () => {
     );
   }
   
-  // Get approved applications that can be funded
-  const approvedApplications = student.scholarshipApplications?.filter(app => 
-    app.status === 'approved' && !app.paymentId
-  ) || [];
+  // Get applications based on user role and status
+  let displayedApplications = [];
+  const isDonor = user?.role === 'donor';
+  const isAdmin = user?.role === 'admin';
+  
+  if (isDonor) {
+    // Donors only see approved applications they can fund
+    displayedApplications = student.scholarshipApplications?.filter(app => 
+      app.status === 'approved' && !app.paymentId
+    ) || [];
+    
+    console.log("Approved applications for donor:", displayedApplications);
+    
+    // If no applications are found in scholarshipApplications, check approvedApplications
+    if (displayedApplications.length === 0 && student.approvedApplications?.length > 0) {
+      console.log("Using approvedApplications instead:", student.approvedApplications);
+      displayedApplications = student.approvedApplications;
+    }
+  } else {
+    // Admins see all applications
+    displayedApplications = student.scholarshipApplications || [];
+  }
+  
+  const getStatusClass = (status) => {
+    switch(status) {
+      case 'approved': return 'text-green-600';
+      case 'rejected': return 'text-red-600';
+      case 'pending': return 'text-yellow-600';
+      case 'funded': return 'text-blue-600';
+      default: return 'text-gray-600';
+    }
+  };
   
   return (
     <div className="p-4">
@@ -160,61 +215,73 @@ const StudentDetail = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4">Scholarship Applications</h2>
             
-            {approvedApplications.length === 0 ? (
+            {displayedApplications.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <FiFileText className="mx-auto text-gray-400 text-4xl mb-2" />
-                <p>This student doesn't have any approved scholarships available for funding.</p>
+                <p>{isDonor 
+                  ? "This student doesn't have any approved scholarships available for funding."
+                  : "This student hasn't submitted any scholarship applications."}</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {approvedApplications.map(application => (
-                  <div 
-                    key={application._id} 
-                    className="border rounded-lg p-4 transition-all hover:shadow-md"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {application.scholarshipId?.title || 'Scholarship'}
-                        </h3>
-                        <p className="text-gray-600 flex items-center mt-1">
-                          <FiCalendar className="mr-1" />
-                          Applied: {new Date(application.appliedAt).toLocaleDateString()}
-                        </p>
-                        <p className="text-gray-600 flex items-center mt-1">
-                          <FiAward className="mr-1" />
-                          Status: <span className="ml-1 text-green-600 font-medium">Approved</span>
-                        </p>
-                        {application.scholarshipId?.amount && (
+                {displayedApplications.map(application => {
+                  // Extract scholarship info differently based on where it is in the object
+                  const scholarshipInfo = application.scholarship || {};
+                  const scholarshipId = application.scholarshipId || scholarshipInfo._id;
+                  const scholarshipTitle = application.scholarshipTitle || scholarshipInfo.title || 'Unknown Scholarship';
+                  const scholarshipAmount = scholarshipInfo.amount || 0;
+                  
+                  return (
+                    <div 
+                      key={application._id} 
+                      className="border rounded-lg p-4 transition-all hover:shadow-md"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                          <h3 className="font-semibold text-lg">
+                            {scholarshipTitle}
+                          </h3>
                           <p className="text-gray-600 flex items-center mt-1">
-                            <FiDollarSign className="mr-1" />
-                            Amount: <span className="ml-1 font-medium">
-                              {new Intl.NumberFormat('en-US', {
-                                style: 'currency',
-                                currency: 'USD'
-                              }).format(application.scholarshipId.amount)}
-                            </span>
+                            <FiCalendar className="mr-1" />
+                            Applied: {new Date(application.appliedAt).toLocaleDateString()}
                           </p>
+                          <p className="text-gray-600 flex items-center mt-1">
+                            <FiAward className="mr-1" />
+                            Status: <span className={`ml-1 ${getStatusClass(application.status)} font-medium`}>{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
+                          </p>
+                          {scholarshipAmount > 0 && (
+                            <p className="text-gray-600 flex items-center mt-1">
+                              <FiDollarSign className="mr-1" />
+                              Amount: <span className="ml-1 font-medium">
+                                {new Intl.NumberFormat('en-US', {
+                                  style: 'currency',
+                                  currency: 'USD'
+                                }).format(scholarshipAmount)}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                        
+                        {isDonor && application.status === 'approved' && (
+                          <button
+                            onClick={() => handleFundScholarship(scholarshipId)}
+                            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center"
+                          >
+                            <FiDollarSign className="mr-2" />
+                            Fund Scholarship
+                          </button>
                         )}
                       </div>
                       
-                      <button
-                        onClick={() => handleFundScholarship(application.scholarshipId._id)}
-                        className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center"
-                      >
-                        <FiDollarSign className="mr-2" />
-                        Fund Scholarship
-                      </button>
+                      {application.statement && (
+                        <div className="mt-3">
+                          <h4 className="font-medium">Personal Statement</h4>
+                          <p className="text-gray-700 text-sm mt-1">{application.statement}</p>
+                        </div>
+                      )}
                     </div>
-                    
-                    {application.statement && (
-                      <div className="mt-3">
-                        <h4 className="font-medium">Personal Statement</h4>
-                        <p className="text-gray-700 text-sm mt-1">{application.statement}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -227,12 +294,21 @@ const StudentDetail = () => {
           </div>
           
           <div className="mt-6">
-            <Link 
-              to="/donor/students" 
-              className="text-blue-600 hover:text-blue-800 font-medium"
-            >
-              ← Back to Students
-            </Link>
+            {isDonor ? (
+              <Link 
+                to="/donor/students" 
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                ← Back to Students
+              </Link>
+            ) : (
+              <Link 
+                to="/admin/students" 
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                ← Back to Students
+              </Link>
+            )}
           </div>
         </div>
       </div>

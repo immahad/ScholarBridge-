@@ -233,8 +233,8 @@ const SimpleManageUsers = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [stats, setStats] = useState({
     totalStudents: 0,
-    pendingStudents: 0,
-    approvedStudents: 0,
+    pendingApplications: 0,
+    approvedApplications: 0,
     rejectedStudents: 0,
     fundedStudents: 0,
     totalDonors: 0,
@@ -254,7 +254,73 @@ const SimpleManageUsers = () => {
       try {
         setLoading(true);
         
-        // Fetch real users from the API
+        // First fetch dashboard stats to get accurate overall counts
+        try {
+          const dashboardResponse = await axios.get('/api/admin/dashboard', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (dashboardResponse.data && dashboardResponse.data.success) {
+            const dashStats = dashboardResponse.data.stats;
+            
+            // Set base statistics from dashboard first
+            setStats({
+              totalStudents: dashStats.totalStudents || 0,
+              pendingApplications: dashStats.pendingApplicationsCount || 0,
+              approvedApplications: dashStats.approvedApplicationsCount || 0,
+              rejectedStudents: dashStats.rejectedApplicationsCount || 0,
+              fundedStudents: 0, // Will calculate from user data if available
+              totalDonors: dashStats.totalDonors || 0,
+              activeDonors: dashStats.totalDonors || 0, // Assuming all donors are active by default
+              totalDonations: dashStats.totalDonationsAmount || 0
+            });
+            
+            // Debug logs to check what values are coming from the dashboard
+            console.log("Dashboard stats: ", dashStats);
+            console.log("Pending applications count: ", dashStats.pendingApplicationsCount);
+            console.log("Approved applications count: ", dashStats.approvedApplicationsCount);
+          }
+        } catch (dashError) {
+          console.error('Error fetching dashboard stats:', dashError);
+          // Continue with user data fetch
+        }
+        
+        // For applications, directly fetch applications to get accurate counts
+        try {
+          // Fetch all applications to get accurate counts
+          const applicationsResponse = await axios.get('/api/applications', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (applicationsResponse.data && applicationsResponse.data.success) {
+            const applications = applicationsResponse.data.applications || [];
+            
+            // Count applications by status
+            const pendingCount = applications.filter(app => app.status === 'pending').length;
+            const approvedCount = applications.filter(app => app.status === 'approved').length;
+            const rejectedCount = applications.filter(app => app.status === 'rejected').length;
+            const fundedCount = applications.filter(app => app.status === 'funded').length;
+            
+            // Update stats with accurate application counts
+            setStats(prevStats => ({
+              ...prevStats,
+              pendingApplications: pendingCount,
+              approvedApplications: approvedCount,
+              rejectedStudents: rejectedCount,
+              fundedStudents: fundedCount
+            }));
+            
+            // Debug logs
+            console.log("Applications fetched directly: ", applications.length);
+            console.log("Pending count: ", pendingCount);
+            console.log("Approved count: ", approvedCount);
+          }
+        } catch (appError) {
+          console.error('Error fetching applications data:', appError);
+          // Continue with user data fetch
+        }
+        
+        // Fetch users based on current tab
         const params = {
           page: currentPage,
           limit: usersPerPage,
@@ -277,20 +343,56 @@ const SimpleManageUsers = () => {
         
         console.log('Users API response:', response.data);
         
-        if (response.data) {
+        if (response.data && response.data.success) {
           // Extract user data
           const userData = response.data;
+          const usersList = userData.users || [];
           
           // Set users based on active tab
           if (activeTab === 'students') {
-            setStudents(userData.users?.filter(user => user?.role === 'student') || []);
+            setStudents(usersList.filter(user => user?.role === 'student') || []);
+            
+            // Try to update student-specific stats if no application data was fetched earlier
+            const studentsData = usersList.filter(user => user?.role === 'student');
+            if (studentsData.length > 0) {
+              let pendingCount = 0, approvedCount = 0, rejectedCount = 0, fundedCount = 0;
+              
+              // Count application statuses across all students
+              studentsData.forEach(student => {
+                if (student.scholarshipApplications && student.scholarshipApplications.length > 0) {
+                  student.scholarshipApplications.forEach(app => {
+                    if (app.status === 'pending') pendingCount++;
+                    else if (app.status === 'approved') approvedCount++;
+                    else if (app.status === 'rejected') rejectedCount++;
+                    else if (app.status === 'funded') fundedCount++;
+                  });
+                }
+              });
+              
+              // Only update if we actually found applications
+              if (pendingCount > 0 || approvedCount > 0 || rejectedCount > 0 || fundedCount > 0) {
+                setStats(prevStats => ({
+                  ...prevStats,
+                  pendingApplications: pendingCount,
+                  approvedApplications: approvedCount,
+                  rejectedStudents: rejectedCount,
+                  fundedStudents: fundedCount
+                }));
+              }
+            }
           } else if (activeTab === 'donors') {
-            setDonors(userData.users?.filter(user => user?.role === 'donor') || []);
-          }
-          
-          // Set statistics
-          if (userData.statistics) {
-            setStats(userData.statistics);
+            setDonors(usersList.filter(user => user?.role === 'donor') || []);
+            
+            // Update donor-specific stats
+            const donorsData = usersList.filter(user => user?.role === 'donor');
+            if (donorsData.length > 0) {
+              const activeDonorsCount = donorsData.filter(donor => donor?.isActive).length;
+              
+              setStats(prevStats => ({
+                ...prevStats,
+                activeDonors: activeDonorsCount
+              }));
+            }
           }
           
           // Set pagination info
@@ -397,12 +499,12 @@ const SimpleManageUsers = () => {
       const fullName = `${student.firstName || ''} ${student.lastName || ''}`.toLowerCase();
       const emailMatch = (student.email || '').toLowerCase().includes(searchTerm.toLowerCase());
       const nameMatch = fullName.includes(searchTerm.toLowerCase());
-      const schoolMatch = (student.school || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const institutionMatch = (student.institution || student.school || '').toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesSearch = searchTerm === '' || emailMatch || nameMatch || schoolMatch;
+      const matchesSearch = searchTerm === '' || emailMatch || nameMatch || institutionMatch;
       
       const matchesStatus = applicationStatusFilter === 'all' || 
-                            (student.applicationStatus === applicationStatusFilter);
+                           (student.applicationStatus === applicationStatusFilter);
       
       return matchesSearch && matchesStatus;
     });
@@ -461,7 +563,7 @@ const SimpleManageUsers = () => {
           <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
               title="Pending Applications" 
-              value={stats.pendingStudents} 
+              value={stats.pendingApplications} 
               icon={<FiClock size={20} className="text-blue-600" />}
               color="border-blue-600"
               textColor="text-blue-700"
@@ -471,8 +573,8 @@ const SimpleManageUsers = () => {
           </div>
           <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
-              title="Approved Students" 
-              value={stats.approvedStudents} 
+              title="Approved Applications" 
+              value={stats.approvedApplications} 
               icon={<FiCheckCircle size={20} className="text-green-600" />}
               color="border-green-600"
               textColor="text-green-700"
@@ -518,7 +620,7 @@ const SimpleManageUsers = () => {
           <div className="lg:col-span-2 xl:col-span-2">
             <StatCard 
               title="Total Donations" 
-              value={`$${stats.totalDonations.toLocaleString()}`} 
+              value={`$${(stats.totalDonations || 0).toLocaleString()}`} 
               icon={<FiDollarSign size={20} className="text-blue-600" />}
               color="border-blue-600"
               textColor="text-blue-700"
@@ -530,7 +632,7 @@ const SimpleManageUsers = () => {
             <StatCard 
               title="Average Donation" 
               value={stats.activeDonors > 0 ? 
-                `$${Math.round(stats.totalDonations / stats.activeDonors).toLocaleString()}` : 
+                `$${Math.round((stats.totalDonations || 0) / Math.max(1, stats.activeDonors)).toLocaleString()}` : 
                 '$0'} 
               icon={<FiRefreshCw size={20} className="text-green-600" />}
               color="border-green-600"
@@ -640,65 +742,48 @@ const SimpleManageUsers = () => {
                   <thead>
                     <tr className="bg-blue-50">
                       <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">Student</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">School</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">Graduation</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">Account</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">Institution</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {getFilteredStudents().map((student, index) => (
-                      <tr 
-                        key={student._id} 
-                        className={`transition-colors duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap group relative">
-                          <div className="flex items-center space-x-4">
-                            <div className="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-green-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-                              {student.firstName[0]}{student.lastName[0]}
+                      <tr key={student._id || index} className="hover:bg-gray-50 transition-colors duration-200">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {student.firstName} {student.lastName}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {student.email}
+                              </div>
                             </div>
-                            <div className="ml-2">
-                              <div className="text-base font-medium text-gray-900">{student.firstName} {student.lastName}</div>
-                              <div className="text-sm text-gray-500">{student.email}</div>
-                            </div>
-                            
-                            {/* Delete button */}
-                            <button
-                              onClick={() => handleDeleteUser(student._id, `${student.firstName} ${student.lastName}`, 'student')}
-                              className="p-2 bg-red-100 text-red-600 rounded-full absolute right-6 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 delete-btn"
-                              aria-label="Delete user"
-                            >
-                              <FiTrash2 size={16} />
-                            </button>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{student.school}</div>
+                          <div className="text-sm text-gray-900">
+                            {student.institution || student.school || 'Not specified'}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{student.graduationYear}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <StudentStatusPill status={student.applicationStatus} />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex space-x-3 justify-end">
                             <button
                               onClick={() => handleStatusToggle(student._id, student.isActive, 'student')}
-                              className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                                student.isActive ? 'bg-green-500' : 'bg-red-300'
+                              className={`px-3 py-1 rounded-md ${
+                                student.isActive
+                                  ? 'bg-rose-100 text-rose-700 hover:bg-rose-200'
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
                               }`}
-                              aria-pressed={student.isActive}
                             >
-                              <span
-                                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                                  student.isActive ? 'translate-x-5' : 'translate-x-0'
-                                }`}
-                              />
+                              {student.isActive ? 'Deactivate' : 'Activate'}
                             </button>
-                            <span className={`ml-2 text-sm ${student.isActive ? 'text-green-600' : 'text-red-600'}`}>
-                              {student.isActive ? 'Active' : 'Inactive'}
-                            </span>
+                            <button
+                              onClick={() => handleDeleteUser(student._id, `${student.firstName} ${student.lastName}`, 'student')}
+                              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 delete-btn"
+                            >
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -730,70 +815,61 @@ const SimpleManageUsers = () => {
                 <table className="min-w-full divide-y divide-gray-200 responsive-table enhanced-table">
                   <thead>
                     <tr className="bg-green-50">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Donor</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Organization</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Donations</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Total Donated</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Account</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Total Amount</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-green-800 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {getFilteredDonors().map((donor, index) => (
-                      <tr 
-                        key={donor._id} 
-                        className={`transition-colors duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-green-50/30'}`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap group relative">
-                          <div className="flex items-center space-x-4">
-                            <div className="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-                              {donor.organizationName ? donor.organizationName[0] : donor.firstName[0]}
-                            </div>
-                            <div className="ml-2">
-                              <div className="text-base font-medium text-gray-900">
-                                {donor.organizationName || `${donor.firstName} ${donor.lastName}`}
+                      <tr key={donor._id || index} className="hover:bg-gray-50 transition-colors duration-200">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {donor.firstName} {donor.lastName}
                               </div>
-                              <div className="text-sm text-gray-500">{donor.email}</div>
+                              <div className="text-sm text-gray-500">
+                                {donor.email}
+                              </div>
                             </div>
-                            
-                            {/* Delete button */}
-                            <button
-                              onClick={() => handleDeleteUser(donor._id, donor.organizationName || `${donor.firstName} ${donor.lastName}`, 'donor')}
-                              className="p-2 bg-red-100 text-red-600 rounded-full absolute right-6 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 delete-btn"
-                              aria-label="Delete donor"
-                            >
-                              <FiTrash2 size={16} />
-                            </button>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1.5 rounded-full">
-                              {donor.donationsMade} donations
-                            </span>
+                          <div className="text-sm text-gray-900">
+                            {donor.organizationName || 'Individual Donor'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-green-700">
-                            ${donor.totalDonated.toLocaleString()}
+                          <div className="text-sm text-gray-900">
+                            {donor.donationsMade || 0}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
+                          <div className="text-sm text-gray-900">
+                            ${(donor.totalDonated || 0).toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex space-x-3 justify-end">
                             <button
                               onClick={() => handleStatusToggle(donor._id, donor.isActive, 'donor')}
-                              className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                                donor.isActive ? 'bg-green-500' : 'bg-red-300'
+                              className={`px-3 py-1 rounded-md ${
+                                donor.isActive
+                                  ? 'bg-rose-100 text-rose-700 hover:bg-rose-200'
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
                               }`}
-                              aria-pressed={donor.isActive}
                             >
-                              <span
-                                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                                  donor.isActive ? 'translate-x-5' : 'translate-x-0'
-                                }`}
-                              />
+                              {donor.isActive ? 'Deactivate' : 'Activate'}
                             </button>
-                            <span className={`ml-2 text-sm ${donor.isActive ? 'text-green-600' : 'text-red-600'}`}>
-                              {donor.isActive ? 'Active' : 'Inactive'}
-                            </span>
+                            <button
+                              onClick={() => handleDeleteUser(donor._id, donor.organizationName || `${donor.firstName} ${donor.lastName}`, 'donor')}
+                              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 delete-btn"
+                            >
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -805,18 +881,16 @@ const SimpleManageUsers = () => {
           )
         )}
         
-        {/* Pagination Controls - moved to right, styled green and fixed size */}
-        {(activeTab === 'students' && getFilteredStudents().length > 0) || 
-         (activeTab === 'donors' && getFilteredDonors().length > 0) ? (
+        {/* Pagination Controls */}
+        {totalPages > 0 && (
           <div className="mt-6">
             <div className="w-full flex justify-end">
               <div className="flex items-center bg-white p-4 rounded-xl shadow-sm">
-                <nav className="flex items-center space-x-2" aria-label="Pagination" style={{ marginLeft: '73vw' }}>
+                <nav className="flex items-center space-x-2" aria-label="Pagination">
                   {/* Previous */}
                   <button
                     onClick={goToPreviousPage}
                     disabled={currentPage === 1}
-                    style={{backgroundColor: 'lightgreen'}}
                     className={`inline-flex items-center justify-center h-10 w-10 rounded-md bg-green-500 text-white transition duration-200 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'}`}
                   >
                     <span className="sr-only">Prev</span>
@@ -844,7 +918,6 @@ const SimpleManageUsers = () => {
                   <button
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
-                    style={{backgroundColor: 'lightgreen'}}
                     className={`inline-flex items-center justify-center h-10 w-10 rounded-md bg-green-500 text-white transition duration-200 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'}`}
                   >
                     <span className="sr-only">Next</span>
@@ -856,10 +929,16 @@ const SimpleManageUsers = () => {
               </div>
             </div>
             <div className="mt-2 pr-4 text-right text-sm text-gray-700">
-              Showing <span className="font-medium">{getFilteredStudents().length > 0 ? getFilteredStudents().length : getFilteredDonors().length}</span> of <span className="font-medium">{activeTab === 'students' ? getFilteredStudents().length : getFilteredDonors().length}</span> results
+              {(activeTab === 'students' ? stats.totalStudents : stats.totalDonors) > 0 ? (
+                <>
+                  Showing <span className="font-medium">{(currentPage - 1) * usersPerPage + 1}</span> - <span className="font-medium">{Math.min(currentPage * usersPerPage, activeTab === 'students' ? stats.totalStudents : stats.totalDonors)}</span> of <span className="font-medium">{activeTab === 'students' ? stats.totalStudents : stats.totalDonors}</span> results
+                </>
+              ) : (
+                <>No results found</>
+              )}
             </div>
           </div>
-        ) : null}
+        )}
       </div>
       
       {/* Delete Confirmation Modal */}

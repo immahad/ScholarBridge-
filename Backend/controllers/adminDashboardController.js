@@ -342,7 +342,8 @@ exports.getDashboard = async (req, res) => {
       growthChartData,
       applicationStatusData,
       recentApplications,
-      donorScholarships: formattedDonorScholarships
+      donorScholarships: formattedDonorScholarships,
+      allDonorScholarships: formattedDonorScholarships
     });
   } catch (error) {
     console.error('Get admin dashboard error:', error);

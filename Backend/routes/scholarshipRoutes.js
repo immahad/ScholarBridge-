@@ -35,7 +35,7 @@ router.post(
 );
 
 // Routes with :id parameter should be AFTER specific routes
-router.get('/:id', verifyToken, isDonorOrOwner(), scholarshipController.getScholarshipById);
+router.get('/:id', verifyToken, scholarshipController.getScholarshipById);
 
 router.put(
   '/:id',

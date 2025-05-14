@@ -22,7 +22,13 @@ const ScholarshipDetailPage = () => {
     const fetchScholarship = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/scholarships/${id}`);
+        const response = await axios.get(`/api/scholarships/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log("Scholarship data:", response.data.scholarship);
+        console.log("Criteria data:", response.data.scholarship.criteria);
+        console.log("MinGPA value:", response.data.scholarship.criteria?.minGPA);
+        console.log("requiredDocuments value:", response.data.scholarship.criteria?.requiredDocuments);
         setScholarship(response.data.scholarship);
         
         // Check if student has already applied
@@ -151,6 +157,11 @@ const ScholarshipDetailPage = () => {
       </div>
     );
   }
+
+  // Function to format the document name for display
+  const formatDocumentName = (doc) => {
+    return doc.charAt(0).toUpperCase() + doc.slice(1);
+  };
 
   return (
     <div className="scholarship-detail-page">

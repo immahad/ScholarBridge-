@@ -48,25 +48,22 @@ const scholarshipSchema = new mongoose.Schema({
   // Advanced criteria fields
   criteria: {
     minGPA: { 
-      type: Number, 
-      default: 0,
-      min: 0,
-      max: 4
+      type: Number,
+      default: 0
     },
-    requiredDocuments: {
+    requiredDocuments: { 
       type: [String],
-      enum: ['transcript', 'recommendation', 'financial', 'id', 'essay', 'cv', 'resume'],
       default: ['transcript']
     },
-    eligibleInstitutions: {
+    eligibleInstitutions: { 
       type: [String],
       default: []
     },
-    eligiblePrograms: {
+    eligiblePrograms: { 
       type: [String],
       default: []
     },
-    additionalCriteria: {
+    additionalCriteria: { 
       type: [String],
       default: []
     }

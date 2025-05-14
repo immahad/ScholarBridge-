@@ -51,29 +51,31 @@ exports.createScholarship = async (req, res) => {
 exports.updateScholarship = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, amount, criteria, deadlineDate, status } = req.body;
+    const { title, description } = req.body;
     
-    // Find and update scholarship
-    const scholarship = await Scholarship.findByIdAndUpdate(
-      id,
-      {
-        title,
-        description,
-        amount,
-        criteria,
-        deadlineDate,
-        status,
-        updatedAt: new Date()
-      },
-      { new: true }
-    );
+    // For admin updates, we only allow changing title and description
+    // Find current scholarship first
+    const existingScholarship = await Scholarship.findById(id);
     
-    if (!scholarship) {
+    if (!existingScholarship) {
       return res.status(404).json({
         success: false,
         message: 'Scholarship not found'
       });
     }
+    
+    // Update only title and description
+    const scholarship = await Scholarship.findByIdAndUpdate(
+      id,
+      {
+        title: title || existingScholarship.title,
+        description: description || existingScholarship.description,
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+    
+    console.log(`Admin updated scholarship ${id}: Title and/or description modified`);
     
     return res.status(200).json({
       success: true,

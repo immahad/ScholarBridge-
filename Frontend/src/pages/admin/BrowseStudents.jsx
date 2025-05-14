@@ -205,40 +205,30 @@ const AdminBrowseStudents = () => {
                   <hr />
                   <h4>Application Status:</h4>
                   {student.scholarshipApplications && student.scholarshipApplications.length > 0 ? (
-                    <div>
-                      {student.scholarshipApplications.map(app => (
-                        <div key={app._id} className="application-item mb-3 p-2 border-l-4 border-blue-500 bg-blue-50">
-                          <p><strong>Scholarship:</strong> {app.scholarshipTitle || 'N/A'}</p>
-                          <p><strong>Status:</strong> 
-                            <span className={`ml-2 px-2 py-1 rounded text-xs ${
-                              app.status === 'approved' ? 'bg-green-100 text-green-800' :
-                              app.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                              app.status === 'funded' ? 'bg-blue-100 text-blue-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                            </span>
-                          </p>
-                          <div className="flex gap-2 mt-2">
-                            {app.status === 'pending' && (
-                              <>
-                                <button 
-                                  onClick={() => handleApplicationAction(student._id, app._id, 'approve')}
-                                  className="px-3 py-1 bg-green-500 text-white rounded text-xs flex items-center"
-                                >
-                                  <FiCheck className="mr-1" /> Approve
-                                </button>
-                                <button 
-                                  onClick={() => handleApplicationAction(student._id, app._id, 'reject')}
-                                  className="px-3 py-1 bg-red-500 text-white rounded text-xs flex items-center"
-                                >
-                                  <FiX className="mr-1" /> Reject
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                    <div className="application-summary">
+                      <p><strong>Total Applications:</strong> {student.scholarshipApplications.length}</p>
+                      <div className="application-stats">
+                        <p>
+                          <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">
+                            Approved: {student.scholarshipApplications.filter(app => app.status === 'approved').length}
+                          </span>
+                        </p>
+                        <p>
+                          <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-800">
+                            Rejected: {student.scholarshipApplications.filter(app => app.status === 'rejected').length}
+                          </span>
+                        </p>
+                        <p>
+                          <span className="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800">
+                            Pending: {student.scholarshipApplications.filter(app => app.status === 'pending').length}
+                          </span>
+                        </p>
+                        <p>
+                          <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                            Funded: {student.scholarshipApplications.filter(app => app.status === 'funded').length}
+                          </span>
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <p>No applications submitted yet.</p>

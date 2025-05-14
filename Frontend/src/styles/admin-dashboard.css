@@ -2,18 +2,44 @@
 .dashboard-analytics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.dashboard-section {
+  width: 100%;
+  height: 100%;
+  margin-bottom: 2rem;
+}
+
+.section-header {
   margin-bottom: 1.5rem;
 }
 
+.section-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+}
+
 .chart-section {
-  min-height: 380px;
+  min-height: 450px;
+  border-radius: 8px;
+  background-color: #fff;
+  padding: 1.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Growth Chart Styles */
 .growth-summary {
   display: flex;
   gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
 .growth-item {
@@ -37,7 +63,46 @@
 }
 
 .growth-chart {
-  margin-top: 1.5rem;
+  margin-top: 1rem;
+  flex-grow: 1;
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+  position: relative;
+  overflow: visible;
+}
+
+.chart-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.line-chart {
+  display: block;
+  height: 100%;
+  width: 100%;
+  max-height: 250px;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.chart-legend .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-legend .legend-color {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
 }
 
 .x-axis-labels {
@@ -68,33 +133,32 @@
 }
 
 .pie-chart {
-  width: 200px;
-  height: 200px;
+  width: 300px;
+  height: 300px;
   margin: 0 auto 1.5rem;
 }
 
-.pie-chart-legend {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
-  width: 100%;
+.pie-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 1.5rem;
 }
 
-.pie-chart-legend .legend-item {
+.legend-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
 }
 
-.pie-chart-legend .legend-color {
-  width: 12px;
-  height: 12px;
+.legend-color {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
   border-radius: 3px;
-}
-
-.pie-chart-legend .legend-text {
-  font-size: 0.85rem;
-  color: var(--text-color);
 }
 
 /* Recent Applications Styles */
@@ -187,9 +251,25 @@
 }
 
 /* Responsive styles */
+@media (max-width: 1200px) {
+  .dashboard-analytics-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  
+  .chart-section {
+    min-height: 400px;
+  }
+}
+
 @media (max-width: 992px) {
   .dashboard-analytics-grid {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .chart-section {
+    min-height: 380px;
   }
   
   .quick-actions {
@@ -197,10 +277,29 @@
   }
 }
 
+@media (max-width: 768px) {
+  .chart-section {
+    min-height: 350px;
+    padding: 1rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .growth-chart {
+    max-height: 250px;
+  }
+}
+
 @media (max-width: 576px) {
   .growth-summary {
     flex-direction: column;
     gap: 0.5rem;
+  }
+  
+  .chart-section {
+    min-height: 320px;
   }
   
   .quick-actions {

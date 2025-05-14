@@ -502,6 +502,19 @@ exports.getStudentById = async (req, res) => {
       })
       .select('-password');
     
+    // Add scholarship titles to applications for easier access
+    if (populatedStudent.scholarshipApplications && populatedStudent.scholarshipApplications.length > 0) {
+      populatedStudent.scholarshipApplications = populatedStudent.scholarshipApplications.map(app => {
+        // Create a plain object that we can modify
+        const appObj = app.toObject ? app.toObject() : {...app};
+        // Add scholarshipTitle property if it doesn't exist
+        if (!appObj.scholarshipTitle && appObj.scholarshipId && appObj.scholarshipId.title) {
+          appObj.scholarshipTitle = appObj.scholarshipId.title;
+        }
+        return appObj;
+      });
+    }
+    
     return res.status(200).json({
       success: true,
       student: populatedStudent

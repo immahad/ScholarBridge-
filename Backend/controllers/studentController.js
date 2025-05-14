@@ -7,6 +7,69 @@ const mongoose = require('mongoose');
 const { asyncHandler, createError } = require('../middleware/errorHandler');
 
 /**
+ * Get student by ID (for donors and admins)
+ * @route GET /api/students/:id
+ * @access Private (Donor and Admin)
+ */
+exports.getStudentById = asyncHandler(async (req, res) => {
+  const studentId = req.params.id;
+  const userRole = req.user.role;
+  
+  const student = await Student.findById(studentId)
+    .populate('scholarshipApplications.scholarshipId', 'title amount');
+  
+  if (!student) {
+    throw createError('Student not found', 404);
+  }
+  
+  // Get approved applications
+  const approvedApplications = student.scholarshipApplications.filter(
+    app => app.status === 'approved'
+  );
+  
+  // Get scholarship details for each application
+  const applicationsWithScholarships = await Promise.all(
+    approvedApplications.map(async (app) => {
+      const scholarship = await Scholarship.findById(app.scholarshipId);
+      
+      return {
+        ...app.toObject(),
+        scholarship: scholarship ? {
+          _id: scholarship._id,
+          title: scholarship.title,
+          amount: scholarship.amount,
+          description: scholarship.description
+        } : null
+      };
+    })
+  );
+  
+  // Filter sensitive information for donors
+  const studentData = {
+    _id: student._id,
+    firstName: student.firstName,
+    lastName: student.lastName,
+    institution: student.institution,
+    program: student.program,
+    currentYear: student.currentYear,
+    expectedGraduationYear: student.expectedGraduationYear,
+    currentGPA: student.currentGPA,
+    bio: student.bio,
+    education: student.education,
+    // Include applications based on role
+    scholarshipApplications: userRole === 'admin' 
+      ? student.scholarshipApplications 
+      : approvedApplications,
+    approvedApplications: applicationsWithScholarships
+  };
+  
+  res.status(200).json({
+    success: true,
+    student: studentData
+  });
+});
+
+/**
  * Get student profile
  * @route GET /api/students/profile
  * @access Private (Student only)
@@ -531,6 +594,7 @@ exports.getDashboard = asyncHandler(async (req, res) => {
 
   // Application stats
   const applicationStats = {
+    total: student.scholarshipApplications.length,
     pending: student.scholarshipApplications.filter(app => app.status === 'pending').length,
     approved: student.scholarshipApplications.filter(app => app.status === 'approved').length,
     rejected: student.scholarshipApplications.filter(app => app.status === 'rejected').length,

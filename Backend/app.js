@@ -15,6 +15,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const scholarshipRoutes = require('./routes/scholarshipRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const triggerRoutes = require('./routes/triggerRoutes');
 
 // Initialize Express app
 const app = express();

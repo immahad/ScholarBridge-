@@ -84,14 +84,14 @@ const AdminDashboard = () => {
           
           // Set recent applications
           setRecentApplications(data.recentApplications || []);
-           console.log('Recent applications from backend:', data.recentApplications);
+          console.log('Recent applications from backend:', data.recentApplications);
           
           // Check if we have pending applications
           const hasPending = data.recentApplications?.some(app => app.status === 'pending') || false;
           console.log('Has pending applications:', hasPending);
           
-          // Set all donor scholarships
-          setPendingScholarships(data.donorScholarships || []);
+          // Set all donor scholarships (not just pending ones)
+          setPendingScholarships(data.allDonorScholarships || data.donorScholarships || []);
         } else {
           console.error('Failed to fetch dashboard data:', dashboardResponse.data.message);
           setStats({
@@ -192,7 +192,7 @@ const AdminDashboard = () => {
     return (
       <div className="growth-chart">
         <div className="chart-container">
-          <svg width="100%" height="250" className="line-chart">
+          <svg width="100%" height="100%" className="line-chart" viewBox="0 0 400 250" preserveAspectRatio="xMidYMid meet">
             <g className="grid-lines">
               {/* Generate horizontal grid lines */}
               {[0, 1, 2, 3, 4].map((i) => (
@@ -251,18 +251,22 @@ const AdminDashboard = () => {
             ))}
             
             {/* X-axis labels (months) */}
-            {userGrowthData.months.map((month, index) => (
-              <text 
-                key={`month-${index}`}
-                x={`${index * (100 / (userGrowthData.months.length - 1))}%`}
-                y="225"
-                textAnchor="middle"
-                fontSize="10"
-                fill="#6b7280"
-              >
-                {month}
-              </text>
-            ))}
+            {userGrowthData.months.map((month, index) => {
+              // Abbreviate month names to 3 characters to avoid overlap
+              const shortenedMonth = month.length > 3 ? month.substring(0, 3) : month;
+              return (
+                <text 
+                  key={`month-${index}`}
+                  x={`${index * (100 / (userGrowthData.months.length - 1))}%`}
+                  y="230"
+                  textAnchor="middle"
+                  fontSize="12"
+                  fill="#6b7280"
+                >
+                  {shortenedMonth}
+                </text>
+              );
+            })}
           </svg>
         </div>
         
@@ -306,20 +310,20 @@ const AdminDashboard = () => {
       const angle = percentage * 360;
       const largeArcFlag = angle > 180 ? 1 : 0;
       
-      // Calculate coordinates
-      const startX = 100 + Math.cos((startAngle - 90) * Math.PI / 180) * 80;
-      const startY = 100 + Math.sin((startAngle - 90) * Math.PI / 180) * 80;
+      // Calculate coordinates for a 300x300 viewBox (center point at 150,150)
+      const startX = 150 + Math.cos((startAngle - 90) * Math.PI / 180) * 120;
+      const startY = 150 + Math.sin((startAngle - 90) * Math.PI / 180) * 120;
       const endAngle = startAngle + angle;
-      const endX = 100 + Math.cos((endAngle - 90) * Math.PI / 180) * 80;
-      const endY = 100 + Math.sin((endAngle - 90) * Math.PI / 180) * 80;
+      const endX = 150 + Math.cos((endAngle - 90) * Math.PI / 180) * 120;
+      const endY = 150 + Math.sin((endAngle - 90) * Math.PI / 180) * 120;
       
       // Calculate label position
       const labelAngle = startAngle + angle / 2;
-      const labelRadius = 60;
-      const labelX = 100 + Math.cos((labelAngle - 90) * Math.PI / 180) * labelRadius;
-      const labelY = 100 + Math.sin((labelAngle - 90) * Math.PI / 180) * labelRadius;
+      const labelRadius = 80;
+      const labelX = 150 + Math.cos((labelAngle - 90) * Math.PI / 180) * labelRadius;
+      const labelY = 150 + Math.sin((labelAngle - 90) * Math.PI / 180) * labelRadius;
       
-      const path = `M 100 100 L ${startX} ${startY} A 80 80 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
+      const path = `M 150 150 L ${startX} ${startY} A 120 120 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
       
       const segment = {
         path,
@@ -337,7 +341,7 @@ const AdminDashboard = () => {
 
     return (
       <div className="pie-chart">
-        <svg width="100%" height="200" viewBox="0 0 200 200">
+        <svg width="100%" height="300" viewBox="0 0 300 300">
           {segments.map((segment, index) => (
             <g key={index}>
               <path 
@@ -346,13 +350,14 @@ const AdminDashboard = () => {
                 stroke="#fff" 
                 strokeWidth="1"
               />
-              {segment.percentage > 0.05 && (
+              {segment.percentage > 0.03 && (
                 <text 
                   x={segment.labelX} 
                   y={segment.labelY} 
                   textAnchor="middle" 
-                  fontSize="10" 
+                  fontSize="16" 
                   fill="#fff"
+                  fontWeight="bold"
                 >
                   {`${Math.round(segment.percentage * 100)}%`}
                 </text>
@@ -501,25 +506,19 @@ const AdminDashboard = () => {
             <div className="dashboard-section chart-section">
               <div className="section-header">
                 <h2>Application Status</h2>
-                <span className="total-applications">
-                  {(() => {
-                    // Calculate total from actual stats instead of pie chart data which might be incomplete
-                    const total = (stats.pendingApplicationsCount || 0) + 
-                                  (stats.approvedApplicationsCount || 0) + 
-                                  (stats.rejectedApplicationsCount || 0);
-                    return total;
-                  })()} total applications
-                </span>
+                <p className="total-applications">
+                  Total: {applicationStatusData.reduce((total, item) => total + item.value, 0)} applications
+                </p>
               </div>
               
               {generatePieChart()}
             </div>
           </div>
 
-          {/* Pending Scholarships Section */}
+          {/* Donor Scholarships Section */}
           <div className="dashboard-section">
             <div className="section-header">
-              <h2>Donor Scholarships</h2>
+              <h2>Recent Donor Scholarships</h2>
               <Link to="/admin/donor-scholarships" className="btn btn-primary">
                 Manage All Donor Scholarships
               </Link>
@@ -715,32 +714,6 @@ const AdminDashboard = () => {
                 <div className="action-content">
                   <h3>Profile Settings</h3>
                   <p>Manage your admin account settings</p>
-                </div>
-              </Link>
-            </div>
-
-            <div className="col-span-1">
-              <Link to="/admin/donor-scholarships" className="quick-action-card">
-                <div className="icon-container bg-amber-100 text-amber-600">
-                  <FiFileText size={24} />
-                </div>
-                <div className="card-content">
-                  <h3>Donor Scholarships</h3>
-                  <p className="count">{stats.pendingDonorScholarships}</p>
-                  <p className="action">Review Now</p>
-                </div>
-              </Link>
-            </div>
-            
-            <div className="col-span-1">
-              <Link to="/admin/applications" className="quick-action-card">
-                <div className="icon-container bg-blue-100 text-blue-600">
-                  <FiFileText size={24} />
-                </div>
-                <div className="card-content">
-                  <h3>Pending Applications</h3>
-                  <p className="count">{stats.pendingApplicationsCount || 0}</p>
-                  <p className="action">Review Now</p>
                 </div>
               </Link>
             </div>

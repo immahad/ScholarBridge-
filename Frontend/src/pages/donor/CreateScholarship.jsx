@@ -163,13 +163,13 @@ const CreateScholarship = () => {
         deadline: formData.deadline,
         category: formData.category,
         eligibilityRequirements: formData.eligibilityRequirements || "Open to all eligible students",
-        // Include criteria
+        // Include criteria - ensure proper data types
         criteria: {
           minGPA: parseFloat(formData.criteria.minGPA) || 0,
-          requiredDocuments: formData.criteria.requiredDocuments || ['transcript'],
-          eligibleInstitutions: formData.criteria.eligibleInstitutions || [],
-          eligiblePrograms: formData.criteria.eligiblePrograms || [],
-          additionalCriteria: formData.criteria.additionalCriteria || []
+          requiredDocuments: Array.isArray(formData.criteria.requiredDocuments) ? formData.criteria.requiredDocuments : ['transcript'],
+          eligibleInstitutions: Array.isArray(formData.criteria.eligibleInstitutions) ? formData.criteria.eligibleInstitutions : [],
+          eligiblePrograms: Array.isArray(formData.criteria.eligiblePrograms) ? formData.criteria.eligiblePrograms : [],
+          additionalCriteria: Array.isArray(formData.criteria.additionalCriteria) ? formData.criteria.additionalCriteria : []
         }
       };
 

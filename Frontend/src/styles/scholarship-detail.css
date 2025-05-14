@@ -240,6 +240,21 @@
   font-size: 0.9rem;
 }
 
+/* Criteria Styles */
+.criteria-item {
+  margin-bottom: 1rem;
+}
+
+.criteria-label {
+  font-weight: 600;
+  margin-right: 0.5rem;
+  color: var(--grey-dark);
+}
+
+.criteria-value {
+  color: var(--text-color);
+}
+
 @media (max-width: 992px) {
   .scholarship-content {
     grid-template-columns: 1fr;

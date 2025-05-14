@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FiFilter, FiSearch, FiCalendar, FiDollarSign, FiBookOpen } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiFilter, FiSearch, FiCalendar, FiDollarSign, FiBookOpen, FiUserPlus, FiArrowLeft } from 'react-icons/fi';
 import axios from 'axios';
 import { useAuth } from '../context/AuthUtils';
 import '../styles/scholarships.css';
@@ -15,22 +15,36 @@ const ScholarshipsPage = () => {
     minAmount: '',
     maxAmount: '',
   });
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Check if user is a student, donor, admin or not logged in
+  const userRole = user?.role || 'guest';
+  const isStudent = userRole === 'student';
+  const isDonor = userRole === 'donor';
+  const isAdmin = userRole === 'admin';
+  const isLoggedOut = !token;
 
   useEffect(() => {
     const fetchScholarships = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/api/students/scholarships', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        console.log('Scholarships API response:', response.data);
-        
-        if (response.data.success) {
-          setScholarships(response.data.scholarships);
+        // Only fetch scholarships if the user is a student
+        if (isStudent) {
+          const response = await axios.get('/api/students/scholarships', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          console.log('Scholarships API response:', response.data);
+          
+          if (response.data.success) {
+            setScholarships(response.data.scholarships);
+          } else {
+            setError('Failed to load scholarships');
+          }
         } else {
-          setError('Failed to load scholarships');
+          // Set loading to false for non-student users since we're not fetching data
+          setLoading(false);
         }
       } catch (err) {
         console.error('Failed to fetch scholarships:', err);
@@ -41,10 +55,8 @@ const ScholarshipsPage = () => {
       }
     };
 
-    if (token) {
-      fetchScholarships();
-    }
-  }, [token]);
+    fetchScholarships();
+  }, [token, isStudent]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -56,6 +68,14 @@ const ScholarshipsPage = () => {
       ...filters,
       [name]: value,
     });
+  };
+
+  const goToDashboard = () => {
+    if (isDonor) {
+      navigate('/donor/dashboard');
+    } else if (isAdmin) {
+      navigate('/admin/dashboard');
+    }
   };
 
   // Filter scholarships based on search term and filters
@@ -78,6 +98,55 @@ const ScholarshipsPage = () => {
   // Get unique categories for filter dropdown
   const categories = [...new Set(scholarships.map(scholarship => scholarship.category))];
 
+  // Render different content based on user role
+  if (isDonor || isAdmin) {
+    return (
+      <div className="scholarships-page">
+        <div className="container">
+          <div className="access-restricted-container" style={{ textAlign: 'center', padding: '50px 20px' }}>
+            <h2 style={{ marginBottom: '20px' }}>Access Restricted</h2>
+            <p style={{ fontSize: '18px', marginBottom: '30px' }}>
+              This page is only available for student accounts.
+            </p>
+            <button 
+              onClick={goToDashboard} 
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', margin: '0 auto' }}
+            >
+              <FiArrowLeft style={{ marginRight: '10px' }} />
+              Go back to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // For logged out users
+  if (isLoggedOut) {
+    return (
+      <div className="scholarships-page">
+        <div className="container">
+          <div className="access-restricted-container" style={{ textAlign: 'center', padding: '50px 20px' }}>
+            <h2 style={{ marginBottom: '20px' }}>Find Scholarships</h2>
+            <p style={{ fontSize: '18px', marginBottom: '30px' }}>
+              Create a student account to browse and apply for scholarships that match your profile.
+            </p>
+            <Link 
+              to="/register?role=student" 
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', margin: '0 auto', width: 'fit-content' }}
+            >
+              <FiUserPlus style={{ marginRight: '10px' }} />
+              Sign Up as a Student
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // For student users - show the normal page
   return (
     <div className="scholarships-page">
       <div className="container">
