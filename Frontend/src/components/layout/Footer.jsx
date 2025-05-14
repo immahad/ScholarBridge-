@@ -10,7 +10,7 @@ const Footer = () => {
       <div className="container footer-container">
         <div className="footer-top">
           <div className="footer-section">
-            <h3 className="footer-title">ScholarSync</h3>
+            <h3 className="footer-title">ScholarBridge</h3>
             <p className="footer-description">
               Connecting students with the financial resources they need to achieve their educational goals.
             </p>
@@ -90,7 +90,7 @@ const Footer = () => {
 
         <div className="footer-bottom">
           <div className="copyright">
-            &copy; {currentYear} ScholarSync. All rights reserved.
+            &copy; {currentYear} ScholarBridge. All rights reserved.
           </div>
           <div className="footer-legal">
             <Link to="/privacy">Privacy Policy</Link>
