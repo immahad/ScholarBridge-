@@ -184,8 +184,8 @@ const BrowseStudents = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {students.map(student => (
-            <div key={student._id} className="bg-white rounded-lg shadow overflow-hidden">
+            {students.map((student, index) => (
+            <div key={`student-${student._id}-${index}`} className="bg-white rounded-lg shadow overflow-hidden">
               <div className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

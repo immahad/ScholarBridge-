@@ -69,7 +69,17 @@ const StudentDetail = () => {
   }, [studentId, token, user]);
   
   const handleFundScholarship = (scholarshipId) => {
-    navigate(`/donor/fund-scholarship/${scholarshipId}/${studentId}`);
+    // Ensure we have a valid scholarshipId, either as a string or from an object
+    const validScholarshipId = typeof scholarshipId === 'object' 
+      ? scholarshipId._id || scholarshipId.toString()
+      : scholarshipId;
+      
+    console.log("Navigating to payment form with:", {
+      scholarshipId: validScholarshipId,
+      studentId
+    });
+    
+    navigate(`/donor/fund-scholarship/${validScholarshipId}/${studentId}`);
   };
   
   if (loading) {
@@ -113,6 +123,14 @@ const StudentDetail = () => {
     displayedApplications = student.scholarshipApplications?.filter(app => 
       app.status === 'approved' && !app.paymentId
     ) || [];
+    
+    console.log("Approved applications for donor:", displayedApplications);
+    
+    // If no applications are found in scholarshipApplications, check approvedApplications
+    if (displayedApplications.length === 0 && student.approvedApplications?.length > 0) {
+      console.log("Using approvedApplications instead:", student.approvedApplications);
+      displayedApplications = student.approvedApplications;
+    }
   } else {
     // Admins see all applications
     displayedApplications = student.scholarshipApplications || [];
@@ -206,56 +224,64 @@ const StudentDetail = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {displayedApplications.map(application => (
-                  <div 
-                    key={application._id} 
-                    className="border rounded-lg p-4 transition-all hover:shadow-md"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {application.scholarshipTitle}
-                        </h3>
-                        <p className="text-gray-600 flex items-center mt-1">
-                          <FiCalendar className="mr-1" />
-                          Applied: {new Date(application.appliedAt).toLocaleDateString()}
-                        </p>
-                        <p className="text-gray-600 flex items-center mt-1">
-                          <FiAward className="mr-1" />
-                          Status: <span className={`ml-1 ${getStatusClass(application.status)} font-medium`}>{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
-                        </p>
-                        {application.scholarshipId?.amount && (
+                {displayedApplications.map(application => {
+                  // Extract scholarship info differently based on where it is in the object
+                  const scholarshipInfo = application.scholarship || {};
+                  const scholarshipId = application.scholarshipId || scholarshipInfo._id;
+                  const scholarshipTitle = application.scholarshipTitle || scholarshipInfo.title || 'Unknown Scholarship';
+                  const scholarshipAmount = scholarshipInfo.amount || 0;
+                  
+                  return (
+                    <div 
+                      key={application._id} 
+                      className="border rounded-lg p-4 transition-all hover:shadow-md"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                          <h3 className="font-semibold text-lg">
+                            {scholarshipTitle}
+                          </h3>
                           <p className="text-gray-600 flex items-center mt-1">
-                            <FiDollarSign className="mr-1" />
-                            Amount: <span className="ml-1 font-medium">
-                              {new Intl.NumberFormat('en-US', {
-                                style: 'currency',
-                                currency: 'USD'
-                              }).format(application.scholarshipId.amount)}
-                            </span>
+                            <FiCalendar className="mr-1" />
+                            Applied: {new Date(application.appliedAt).toLocaleDateString()}
                           </p>
+                          <p className="text-gray-600 flex items-center mt-1">
+                            <FiAward className="mr-1" />
+                            Status: <span className={`ml-1 ${getStatusClass(application.status)} font-medium`}>{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
+                          </p>
+                          {scholarshipAmount > 0 && (
+                            <p className="text-gray-600 flex items-center mt-1">
+                              <FiDollarSign className="mr-1" />
+                              Amount: <span className="ml-1 font-medium">
+                                {new Intl.NumberFormat('en-US', {
+                                  style: 'currency',
+                                  currency: 'USD'
+                                }).format(scholarshipAmount)}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                        
+                        {isDonor && application.status === 'approved' && (
+                          <button
+                            onClick={() => handleFundScholarship(scholarshipId)}
+                            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center"
+                          >
+                            <FiDollarSign className="mr-2" />
+                            Fund Scholarship
+                          </button>
                         )}
                       </div>
                       
-                      {isDonor && application.status === 'approved' && (
-                        <button
-                          onClick={() => handleFundScholarship(application.scholarshipId._id)}
-                          className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center justify-center"
-                        >
-                          <FiDollarSign className="mr-2" />
-                          Fund Scholarship
-                        </button>
+                      {application.statement && (
+                        <div className="mt-3">
+                          <h4 className="font-medium">Personal Statement</h4>
+                          <p className="text-gray-700 text-sm mt-1">{application.statement}</p>
+                        </div>
                       )}
                     </div>
-                    
-                    {application.statement && (
-                      <div className="mt-3">
-                        <h4 className="font-medium">Personal Statement</h4>
-                        <p className="text-gray-700 text-sm mt-1">{application.statement}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
