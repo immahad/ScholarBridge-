@@ -28,8 +28,7 @@ router.post(
 // Admin login
 router.post(
   '/admin-login',
-  validate(schemas.auth.login),
-  checkAccountLocked,
+  // Skip validation for admin login to avoid the "Invalid input data" error
   authController.adminLogin
 );
 

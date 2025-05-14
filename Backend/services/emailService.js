@@ -562,3 +562,89 @@ exports.sendGeneralDonationConfirmationEmail = async (payment, donor) => {
     return false;
   }
 };
+
+/**
+ * Send application notification
+ * @param {Object} student - Student data
+ * @param {Object} scholarship - Scholarship data
+ * @param {Object} application - Application data
+ * @param {String} type - Notification type ('submitted', 'status-updated', etc.)
+ * @param {String} customSubject - Optional custom subject
+ * @param {String} customHtml - Optional custom html content
+ * @returns {Promise<Boolean>} - Success status
+ */
+exports.sendApplicationNotification = async (student, scholarship, application, type, customSubject, customHtml) => {
+  try {
+    console.log(`Sending application ${type} notification to: ${student.email}`);
+    
+    let subject, html;
+    
+    if (customSubject && customHtml) {
+      subject = customSubject;
+      html = customHtml;
+    } else {
+      // Generate email content based on type
+      switch (type) {
+        case 'submitted':
+          subject = "Scholarship Application Submitted Successfully";
+          html = `
+            <h2>Application Submitted Successfully</h2>
+            <p>Dear ${student.firstName} ${student.lastName},</p>
+            <p>Thank you for applying to the <strong>${scholarship.name}</strong> scholarship.</p>
+            <p>Your application has been received and is currently under review.</p>
+            <ul>
+              <li><strong>Application ID:</strong> ${application._id}</li>
+              <li><strong>Scholarship:</strong> ${scholarship.name}</li>
+              <li><strong>Amount:</strong> $${scholarship.amount}</li>
+              <li><strong>Status:</strong> Pending Review</li>
+            </ul>
+            <p>Our administrative team will review your application soon. You'll receive another email when there's an update.</p>
+            <p>Best regards,<br>ScholarBridge Team</p>
+          `;
+          break;
+        
+        default:
+          subject = `Scholarship Application Update`;
+          html = `
+            <h2>Application Update</h2>
+            <p>Dear ${student.firstName} ${student.lastName},</p>
+            <p>There has been an update to your application for the <strong>${scholarship.name}</strong> scholarship.</p>
+            <p>Please log in to your account to view the details.</p>
+            <p>Best regards,<br>ScholarBridge Team</p>
+          `;
+      }
+    }
+    
+    return await sendEmail({
+      to: student.email,
+      subject,
+      html
+    });
+  } catch (error) {
+    console.error('Error in sendApplicationNotification:', error);
+    return false;
+  }
+};
+
+/**
+ * Send scholarship notification
+ * @param {Object} user - User data (donor or admin)
+ * @param {Object} scholarship - Scholarship data
+ * @param {String} subject - Email subject
+ * @param {String} html - Email html content
+ * @returns {Promise<Boolean>} - Success status
+ */
+exports.sendScholarshipNotification = async (user, scholarship, subject, html) => {
+  try {
+    console.log(`Sending scholarship notification to: ${user.email}`);
+    
+    return await sendEmail({
+      to: user.email,
+      subject,
+      html
+    });
+  } catch (error) {
+    console.error('Error in sendScholarshipNotification:', error);
+    return false;
+  }
+};

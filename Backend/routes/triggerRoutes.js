@@ -5,64 +5,49 @@ const Student = require('../models/Student');
 const Donor = require('../models/Donor');
 const Scholarship = require('../models/Scholarship');
 const Application = require('../models/Application');
-const nodemailer = require('nodemailer');
+const emailService = require('../services/emailService');
 const config = require('../config/env');
+const mongoose = require('mongoose');
 
-// Create email transporter with better error handling
-let transporter;
-try {
-  transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER || 'mahad.j@gmail.com',
-      pass: process.env.EMAIL_PASSWORD || 'etoceilaaqogvpgw'
-    },
-    // Add debug option to print detailed logs
-    debug: true
-  });
+// Helper function to parse MongoDB Extended JSON format
+const parseObjectId = (idObject) => {
+  if (!idObject) return null;
   
-  // Verify connection configuration
-  transporter.verify(function(error, success) {
-    if (error) {
-      console.error('SMTP connection error:', error);
-    } else {
-      console.log('SMTP server is ready to take our messages');
-    }
-  });
-} catch (error) {
-  console.error('Error creating email transporter:', error);
-}
-
-// Enhanced helper function to send emails with better logging
-const sendEmail = async (to, subject, html) => {
-  if (!transporter) {
-    console.error('Email transporter not initialized');
-    return { success: false, error: 'Email transporter not initialized' };
+  // Handle $oid extended JSON format
+  if (typeof idObject === 'object' && idObject.$oid) {
+    return idObject.$oid;
   }
   
-  try {
-    console.log(`Attempting to send email to: ${to} with subject: ${subject}`);
-    
-    const mailOptions = {
-      from: '"ScholarBridge" <notifications@scholarbridge.com>',
-      to,
-      subject,
-      html
-    };
-    
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.messageId);
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error('Error sending email:', error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
-    return { success: false, error: error.message };
+  // Handle string ID
+  if (typeof idObject === 'string') {
+    return idObject;
   }
+  
+  // Handle ObjectId instance
+  if (idObject instanceof mongoose.Types.ObjectId) {
+    return idObject.toString();
+  }
+  
+  return idObject;
 };
 
-/**
- * Webhook test endpoint to verify trigger connectivity
- */
+// Helper function to parse the entire document
+const parseDocument = (doc) => {
+  if (!doc) return null;
+  
+  // Create a copy to avoid modifying the original
+  const parsedDoc = { ...doc };
+  
+  // Parse common ID fields
+  if (parsedDoc._id) parsedDoc._id = parseObjectId(parsedDoc._id);
+  if (parsedDoc.studentId) parsedDoc.studentId = parseObjectId(parsedDoc.studentId);
+  if (parsedDoc.scholarshipId) parsedDoc.scholarshipId = parseObjectId(parsedDoc.scholarshipId);
+  if (parsedDoc.createdBy) parsedDoc.createdBy = parseObjectId(parsedDoc.createdBy);
+  
+  return parsedDoc;
+};
+
+// Test endpoint for webhook connectivity
 router.get('/triggers/test', (req, res) => {
   console.log('Trigger test endpoint hit');
   res.status(200).json({ 
@@ -84,9 +69,12 @@ router.post('/triggers/application-submitted', async (req, res) => {
     // Get application data - either from the webhook body or fetch it
     let application;
     if (fullDocument) {
-      application = fullDocument;
+      // Parse the document to handle MongoDB extended JSON format
+      application = parseDocument(fullDocument);
     } else if (applicationId) {
-      application = await Application.findById(applicationId);
+      // Parse the applicationId if it's in extended JSON format
+      const parsedId = parseObjectId(applicationId);
+      application = await Application.findById(parsedId);
     } else {
       return res.status(400).json({ success: false, message: 'No application data provided' });
     }
@@ -95,9 +83,15 @@ router.post('/triggers/application-submitted', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
     
-    // Get student and scholarship data
-    const student = await Student.findById(application.studentId);
-    const scholarship = await Scholarship.findById(application.scholarshipId);
+    // Get student and scholarship data using the parsed IDs
+    const studentId = parseObjectId(application.studentId);
+    const scholarshipId = parseObjectId(application.scholarshipId);
+    
+    console.log(`Looking up student with ID: ${studentId}`);
+    console.log(`Looking up scholarship with ID: ${scholarshipId}`);
+    
+    const student = await Student.findById(studentId);
+    const scholarship = await Scholarship.findById(scholarshipId);
     
     if (!student || !scholarship) {
       return res.status(404).json({ 
@@ -110,24 +104,14 @@ router.post('/triggers/application-submitted', async (req, res) => {
     
     console.log(`Sending application submitted email to student: ${student.email}`);
     
-    // Send email notification
-    const subject = "Scholarship Application Submitted Successfully";
-    const html = `
-      <h2>Application Submitted Successfully</h2>
-      <p>Dear ${student.firstName} ${student.lastName},</p>
-      <p>Thank you for applying to the <strong>${scholarship.name}</strong> scholarship.</p>
-      <p>Your application has been received and is currently under review.</p>
-      <ul>
-        <li><strong>Application ID:</strong> ${application._id}</li>
-        <li><strong>Scholarship:</strong> ${scholarship.name}</li>
-        <li><strong>Amount:</strong> $${scholarship.amount}</li>
-        <li><strong>Status:</strong> Pending Review</li>
-      </ul>
-      <p>Our administrative team will review your application soon. You'll receive another email when there's an update.</p>
-      <p>Best regards,<br>ScholarBridge Team</p>
-    `;
+    // Use emailService to send the email
+    const emailResult = await emailService.sendApplicationNotification(
+      student, 
+      scholarship, 
+      application,
+      'submitted'
+    );
     
-    const emailResult = await sendEmail(student.email, subject, html);
     console.log('Email sending result:', emailResult);
     
     res.status(200).json({ 
@@ -164,9 +148,12 @@ router.post('/triggers/application-status-updated', async (req, res) => {
     // Get application data
     let application;
     if (fullDocument) {
-      application = fullDocument;
+      // Parse the document to handle MongoDB extended JSON format
+      application = parseDocument(fullDocument);
     } else if (applicationId) {
-      application = await Application.findById(applicationId);
+      // Parse the applicationId if it's in extended JSON format
+      const parsedId = parseObjectId(applicationId);
+      application = await Application.findById(parsedId);
     } else {
       return res.status(400).json({ success: false, message: 'No application data provided' });
     }
@@ -175,9 +162,12 @@ router.post('/triggers/application-status-updated', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
     
-    // Get student and scholarship data
-    const student = await Student.findById(application.studentId);
-    const scholarship = await Scholarship.findById(application.scholarshipId);
+    // Get student and scholarship data using the parsed IDs
+    const studentId = parseObjectId(application.studentId);
+    const scholarshipId = parseObjectId(application.scholarshipId);
+    
+    const student = await Student.findById(studentId);
+    const scholarship = await Scholarship.findById(scholarshipId);
     
     if (!student || !scholarship) {
       return res.status(404).json({ 
@@ -234,7 +224,15 @@ router.post('/triggers/application-status-updated', async (req, res) => {
       <p>Best regards,<br>ScholarBridge Team</p>
     `;
     
-    const emailResult = await sendEmail(student.email, subject, html);
+    const emailResult = await emailService.sendApplicationNotification(
+      student, 
+      scholarship, 
+      application,
+      'status-updated',
+      subject,
+      html
+    );
+    
     console.log('Email sending result:', emailResult);
     
     res.status(200).json({ 
@@ -258,13 +256,23 @@ router.post('/triggers/scholarship-created', async (req, res) => {
     
     const { scholarshipId, fullDocument } = req.body;
     
-    if (!scholarshipId) {
-      return res.status(400).json({ success: false, message: 'No scholarship ID provided' });
+    if (!scholarshipId && !fullDocument) {
+      return res.status(400).json({ success: false, message: 'No scholarship data provided' });
     }
     
     // Get scholarship data - always fetch from database to ensure we have the latest data
-    console.log(`Fetching scholarship with ID: ${scholarshipId}`);
-    const scholarship = await Scholarship.findById(scholarshipId);
+    let scholarship;
+    
+    if (scholarshipId) {
+      const parsedId = parseObjectId(scholarshipId);
+      console.log(`Fetching scholarship with ID: ${parsedId}`);
+      scholarship = await Scholarship.findById(parsedId);
+    } else if (fullDocument) {
+      // Use the document from the trigger, but parse IDs
+      scholarship = parseDocument(fullDocument);
+      // Re-fetch to ensure we have the complete document
+      scholarship = await Scholarship.findById(scholarship._id);
+    }
     
     if (!scholarship) {
       return res.status(404).json({ success: false, message: 'Scholarship not found' });
@@ -273,7 +281,7 @@ router.post('/triggers/scholarship-created', async (req, res) => {
     console.log('Found scholarship:', scholarship);
     
     // Get donor data - using createdBy field
-    const creatorId = scholarship.createdBy;
+    const creatorId = parseObjectId(scholarship.createdBy);
     if (!creatorId) {
       return res.status(400).json({ success: false, message: 'Scholarship has no creator ID' });
     }
@@ -313,7 +321,12 @@ router.post('/triggers/scholarship-created', async (req, res) => {
     `;
     
     console.log(`Sending scholarship created email to donor: ${user.email}`);
-    const emailResult = await sendEmail(user.email, subject, html);
+    const emailResult = await emailService.sendScholarshipNotification(
+      user, 
+      scholarship, 
+      subject,
+      html
+    );
     console.log('Email sending result:', emailResult);
     
     res.status(200).json({ 
@@ -350,9 +363,12 @@ router.post('/triggers/scholarship-status-updated', async (req, res) => {
     // Get scholarship data
     let scholarship;
     if (fullDocument) {
-      scholarship = fullDocument;
+      // Parse the document to handle MongoDB extended JSON format
+      scholarship = parseDocument(fullDocument);
     } else if (scholarshipId) {
-      scholarship = await Scholarship.findById(scholarshipId);
+      // Parse the scholarshipId if it's in extended JSON format
+      const parsedId = parseObjectId(scholarshipId);
+      scholarship = await Scholarship.findById(parsedId);
     } else {
       return res.status(400).json({ success: false, message: 'No scholarship data provided' });
     }
@@ -362,7 +378,7 @@ router.post('/triggers/scholarship-status-updated', async (req, res) => {
     }
     
     // Get donor data - using createdBy field instead of donorId
-    const creatorId = scholarship.createdBy;
+    const creatorId = parseObjectId(scholarship.createdBy);
     if (!creatorId) {
       return res.status(400).json({ success: false, message: 'Scholarship has no creator ID' });
     }
@@ -429,7 +445,13 @@ router.post('/triggers/scholarship-status-updated', async (req, res) => {
       <p>Best regards,<br>ScholarBridge Team</p>
     `;
     
-    const emailResult = await sendEmail(user.email, subject, html);
+    const emailResult = await emailService.sendScholarshipNotification(
+      user, 
+      scholarship, 
+      subject,
+      html
+    );
+    
     console.log('Email sending result:', emailResult);
     
     res.status(200).json({ 
@@ -449,16 +471,17 @@ router.post('/triggers/scholarship-status-updated', async (req, res) => {
 router.get('/triggers/debug-scholarship-created/:scholarshipId', async (req, res) => {
   try {
     const { scholarshipId } = req.params;
+    const parsedId = parseObjectId(scholarshipId);
     
     // Get scholarship data
-    const scholarship = await Scholarship.findById(scholarshipId);
+    const scholarship = await Scholarship.findById(parsedId);
     
     if (!scholarship) {
       return res.status(404).json({ success: false, message: 'Scholarship not found' });
     }
     
     // Get donor data - using createdBy field instead of donorId
-    const creatorId = scholarship.createdBy;
+    const creatorId = parseObjectId(scholarship.createdBy);
     if (!creatorId) {
       return res.status(400).json({ success: false, message: 'Scholarship has no creator ID' });
     }
@@ -499,7 +522,13 @@ router.get('/triggers/debug-scholarship-created/:scholarshipId', async (req, res
       <p>Best regards,<br>ScholarBridge Team</p>
     `;
     
-    const emailResult = await sendEmail(user.email, subject, html);
+    const emailResult = await emailService.sendScholarshipNotification(
+      user, 
+      scholarship, 
+      subject,
+      html
+    );
+    
     console.log('Debug email sending result:', emailResult);
     
     res.status(200).json({ 
