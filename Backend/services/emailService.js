@@ -524,3 +524,41 @@ exports.sendRegistrationSuccessEmail = async (user) => {
     html: emailContent
   });
 };
+
+/**
+ * Send general donation confirmation email
+ * @param {Object} payment - Payment data
+ * @param {Object} donor - Donor data
+ * @returns {Promise<Boolean>} - Success status
+ */
+exports.sendGeneralDonationConfirmationEmail = async (payment, donor) => {
+  const { email, firstName } = donor;
+  const { amount, transactionId } = payment;
+  
+  const subject = 'Thank You for Your Donation';
+  
+  const text = `
+    Hello ${firstName},
+    
+    Thank you for your generous donation of $${amount.toFixed(2)} to support our platform.
+    
+    Transaction ID: ${transactionId}
+    Date: ${new Date().toLocaleDateString()}
+    Amount: $${amount.toFixed(2)}
+    
+    Your contribution helps us maintain and improve our platform, making education more accessible to students worldwide.
+    
+    You can view your donation history by logging into your account at ${config.frontendUrl}.
+    
+    Thank you for your support,
+    Scholarship Management System Team
+  `;
+  
+  try {
+    await sendEmail(email, subject, text);
+    return true;
+  } catch (error) {
+    console.error('Send general donation confirmation email error:', error);
+    return false;
+  }
+};

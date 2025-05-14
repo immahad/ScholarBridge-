@@ -7,6 +7,55 @@ const { processScholarshipPayment } = require('../database/transactions/paymentT
 const { generatePaymentReport } = require('../services/reportService');
 const mongoose = require('mongoose');
 const { asyncHandler, createError } = require('../middleware/errorHandler');
+const User = require('../models/User');
+
+/**
+ * Helper function to sync User and Donor records
+ */
+async function syncUserDonorRecords(userId, donorId) {
+  console.log('Syncing User and Donor records:', {
+    userId: userId.toString(),
+    donorId: donorId.toString(),
+    timestamp: new Date().toISOString()
+  });
+  
+  try {
+    // Update User role if needed
+    const user = await User.findById(userId);
+    if (user && user.role !== 'donor') {
+      user.role = 'donor';
+      await user.save();
+      console.log('Updated user role to donor:', {
+        userId: user._id.toString(),
+        email: user.email,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Update Donor userId if needed
+    const donor = await Donor.findById(donorId);
+    if (donor && (!donor.userId || donor.userId.toString() !== userId.toString())) {
+      donor.userId = userId;
+      await donor.save();
+      console.log('Updated donor userId:', {
+        donorId: donor._id.toString(),
+        userId: userId.toString(),
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    return { user, donor };
+  } catch (error) {
+    console.error('Error syncing User and Donor records:', {
+      error: error.message,
+      stack: error.stack,
+      userId: userId.toString(),
+      donorId: donorId.toString(),
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
+}
 
 /**
  * Get donor profile
@@ -442,107 +491,151 @@ exports.getDonationDetails = asyncHandler(async (req, res) => {
  * @access Private (Donor only)
  */
 exports.getDashboard = asyncHandler(async (req, res) => {
-  const donorId = req.user._id;
+  const userId = req.user._id;
   
-  // Find donor
-  const donor = await Donor.findById(donorId);
+  console.log('Fetching dashboard for user:', {
+    userId: userId.toString(),
+    userObject: req.user,
+    timestamp: new Date().toISOString()
+  });
   
-  if (!donor) {
-    throw createError('Donor profile not found', 404);
-  }
-  
-  // Donation summary
-  const donationSummary = {
-    totalDonated: donor.totalDonated,
-    totalDonations: donor.donationHistory.length,
-    studentsHelped: new Set(donor.donationHistory.map(d => d.studentId.toString())).size
-  };
-  
-  // Recent donations
-  const recentDonations = await Promise.all(
-    donor.donationHistory
-      .sort((a, b) => b.donationDate - a.donationDate)
-      .slice(0, 5)
-      .map(async (donation) => {
-        // Get scholarship details
-        const scholarship = await Scholarship.findById(donation.scholarshipId)
-          .select('title');
-        
-        // Get student details
-        const student = await Student.findById(donation.studentId)
-          .select('firstName lastName institution program');
-        
-        return {
-          _id: donation._id,
-          amount: donation.amount,
-          donationDate: donation.donationDate,
-          scholarship: scholarship ? {
-            _id: scholarship._id,
-            title: scholarship.title
-          } : null,
-          student: student ? {
-            _id: student._id,
-            firstName: student.firstName,
-            lastName: student.lastName,
-            institution: student.institution,
-            program: student.program
-          } : null
-        };
-      })
-  );
-  
-  // Get monthly donation trends (last 6 months)
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-  
-  // Initialize monthly data with zeros
-  const monthlyDonations = [];
-  
-  // Create array with last 6 months
-  for (let i = 0; i < 6; i++) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    const year = d.getFullYear();
-    const month = d.getMonth();
+  try {
+    // First try to find donor by userId
+    let donor = await Donor.findOne({ userId });
     
-    monthlyDonations.unshift({
-      month: `${month + 1}/${year}`,
-      amount: 0,
-      count: 0
-    });
-  }
-  
-  // Fill in donation data
-  donor.donationHistory.forEach(donation => {
-    const donationDate = new Date(donation.donationDate);
-    const donationYear = donationDate.getFullYear();
-    const donationMonth = donationDate.getMonth();
-    
-    // Check if donation is within the last 6 months
-    if (donationDate >= sixMonthsAgo) {
-      const monthIndex = monthlyDonations.findIndex(
-        m => m.month === `${donationMonth + 1}/${donationYear}`
-      );
+    // If not found, try to find through recent payments
+    if (!donor) {
+      console.log('Donor not found by userId, checking recent payments...');
+      const recentPayment = await Payment.findOne({})
+        .sort({ createdAt: -1 })
+        .limit(1);
       
-      if (monthIndex !== -1) {
-        monthlyDonations[monthIndex].amount += donation.amount;
-        monthlyDonations[monthIndex].count += 1;
+      if (recentPayment) {
+        console.log('Found recent payment:', {
+          paymentId: recentPayment._id.toString(),
+          donorId: recentPayment.donorId.toString(),
+          timestamp: new Date().toISOString()
+        });
+        
+        // Try to sync records if we found a payment
+        const { donor: syncedDonor } = await syncUserDonorRecords(userId, recentPayment.donorId);
+        donor = syncedDonor;
       }
     }
-  });
-  
-  // Get count of eligible students for donations
-  const eligibleStudentsCount = await Student.countDocuments({
-    'scholarshipApplications.status': 'approved'
-  });
-  
-  res.status(200).json({
-    success: true,
-    donationSummary,
-    recentDonations,
-    monthlyDonations,
-    eligibleStudentsCount
-  });
+    
+    if (!donor) {
+      console.error('Donor not found for user:', {
+        userId: userId.toString(),
+        timestamp: new Date().toISOString()
+      });
+      throw createError('Donor profile not found', 404);
+    }
+    
+    console.log('Fetching dashboard for donor:', donor._id);
+    console.log('Current totalDonated:', donor.totalDonated);
+    console.log('Current donationHistory:', donor.donationHistory);
+    
+    // Recalculate total just to be sure
+    const calculatedTotal = donor.donationHistory.reduce((sum, donation) => {
+      if (donation.status === 'completed') {
+        return sum + (donation.amount || 0);
+      }
+      return sum;
+    }, 0);
+    
+    console.log('Calculated total from history:', calculatedTotal);
+    
+    if (calculatedTotal !== donor.totalDonated) {
+      console.log('Total mismatch detected. Updating donor...');
+      donor.totalDonated = calculatedTotal;
+      await donor.save();
+    }
+    
+    // Donation summary
+    const donationSummary = {
+      totalDonated: donor.totalDonated,
+      totalDonations: donor.donationHistory.length,
+      studentsHelped: new Set(donor.donationHistory.map(d => d.studentId?.toString()).filter(Boolean)).size
+    };
+    
+    console.log('Donation summary:', donationSummary);
+    
+    // Recent donations
+    const recentDonations = await Promise.all(
+      donor.donationHistory
+        .sort((a, b) => b.donationDate - a.donationDate)
+        .slice(0, 5)
+        .map(async (donation) => {
+          // Get scholarship details
+          const scholarship = await Scholarship.findById(donation.scholarshipId)
+            .select('title');
+          
+          // Get student details
+          const student = await Student.findById(donation.studentId)
+            .select('firstName lastName institution program');
+          
+          return {
+            _id: donation._id,
+            amount: donation.amount,
+            donationDate: donation.donationDate,
+            scholarship: scholarship ? {
+              _id: scholarship._id,
+              title: scholarship.title
+            } : null,
+            student: student ? {
+              _id: student._id,
+              firstName: student.firstName,
+              lastName: student.lastName,
+              institution: student.institution,
+              program: student.program
+            } : null
+          };
+        })
+    );
+    
+    // Get monthly donation trends (last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    // Initialize monthly data with zeros
+    const monthlyDonations = Array.from({ length: 6 }, (_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      return {
+        month: date.toLocaleString('default', { month: 'short' }),
+        amount: 0
+      };
+    }).reverse();
+    
+    // Calculate monthly totals
+    donor.donationHistory.forEach(donation => {
+      if (donation.status === 'completed' && donation.donationDate >= sixMonthsAgo) {
+        const monthIndex = monthlyDonations.findIndex(m => 
+          m.month === donation.donationDate.toLocaleString('default', { month: 'short' })
+        );
+        if (monthIndex !== -1) {
+          monthlyDonations[monthIndex].amount += donation.amount;
+        }
+      }
+    });
+    
+    console.log('Monthly donation trends:', monthlyDonations);
+    
+    res.status(200).json({
+      success: true,
+      donationSummary,
+      recentDonations,
+      monthlyDonations
+    });
+  } catch (error) {
+    console.error('Error fetching donor dashboard:', {
+      error: error.message,
+      stack: error.stack,
+      userId: userId.toString(),
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
 });
 
 /**
