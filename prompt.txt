@@ -1,0 +1,30 @@
+I also want to eliminate the logic of trigger I want all these mails to donor or to students or to 
+admin are handled bby nodemailer, i dont want to use triggers anymore. plz update this code as well 
+and check in all files below functionality added because in previous chat you just updated 
+emailService.js file, now I have pulled the latest code from github now check below functionality 
+is developed or not is not then develop it, futher Iattached payment document and donor dashobard 
+pic where recent donation is still displayed as general when I make donation by browsing student 
+and donate his scholarship funds. moreover I want when donor browse students when he try to make 
+donation automatically donation amount will be set as according to that scholarship price amount 
+but if donor wants to make donation according to his financial capacity he may change that amount, 
+so we should track data of student's scholarship amount  we create two more attributes in student 
+document specifically in scholarshipApplications section of student documents in each scholarship 
+for which he applied attributes will be Total scholarship amount and obtained amount when both the 
+values of these attributes equal then the student scholarship case fully completed and this student 
+for that specific scholarship should not be displayed to donors anymore.plz analyze backend and 
+frontend you see where changes needed then make changes according to my requirements. make changes 
+first analysing the schema of document in images
+
+you see the schema of payment document, now when donor donates it is saved with type general 
+donation, now in every case whenever donor donates by browsing students and donor donates specific 
+student scholarship then that time also that donation stores in this schema but it is concerning 
+that how would admin decide which student got that donation, so now what I was thinking that if 
+donor donates any eligible student then that payment stores in backend with that student id with 
+student's scholarship id and when this payment happens, the scholarshipApplications section of that 
+student's specific scholarship updates and in that section payment's document id and donor id also 
+added and his scholarship status should change from approve to funded, moreover when student see his
+ application which has status funded the details of donor displayed to him if donor do not checks 
+ the option that his donation should be anonymous. moreover the donor can make general donation 
+ also without donating specific scholarship or student. plz modify the code according to this logic
+  I shared with you the images of current payment and student documents, donations documents are 
+  being stored in payments collection and student documents in users collection.
