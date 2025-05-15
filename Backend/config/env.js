@@ -35,7 +35,7 @@ module.exports = {
   
   // MongoDB configuration
   db: {
-    uri: process.env.MONGO_URI || 'mongodb://localhost:27017/scholarship_management'
+    uri: process.env.MONGO_URI || 'mongodb://localhost:27017/scholarbridge'
   },
     // JWT configuration
   jwt: {
@@ -48,8 +48,8 @@ module.exports = {
   email: {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: process.env.EMAIL_PORT || 587,
-    user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    password: process.env.EMAIL_PASSWORD || 'your-app-password',
+    user: process.env.EMAIL_USER || 'mahad.j234@gmail.com',
+    password: process.env.EMAIL_PASSWORD || 'etoceilaaqogvpgw',
     from: process.env.EMAIL_FROM || 'noreply@scholarbridge.com'
   },
   

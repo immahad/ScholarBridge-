@@ -201,18 +201,22 @@ exports.createScholarship = async (req, res) => {
     const scholarshipTitle = title || name; // Map 'name' to 'title' if 'title' is missing
     const scholarshipDeadline = deadline; // Use 'deadline' as 'deadlineDate'
 
-    if (
-      !scholarshipTitle ||
-      !description ||
-      !amount ||
-      !scholarshipDeadline ||
-      !category ||
-      !eligibilityRequirements ||
-      typeof eligibilityRequirements !== 'string' ||
-      eligibilityRequirements.trim() === ''
-    ) {
+    // Validate required fields
+    const missingFields = [];
+    if (!scholarshipTitle) missingFields.push('title');
+    if (!description) missingFields.push('description');
+    if (!amount) missingFields.push('amount');
+    if (!scholarshipDeadline) missingFields.push('deadline');
+    if (!category) missingFields.push('category');
+    if (!eligibilityRequirements || typeof eligibilityRequirements !== 'string' || eligibilityRequirements.trim() === '') {
+      missingFields.push('eligibilityRequirements');
+    }
+
+    if (missingFields.length > 0) {
+      console.error('Missing required fields:', missingFields);
       return res.status(400).json({
-        message: 'All fields are required',
+        success: false,
+        message: `Missing required fields: ${missingFields.join(', ')}`,
         received: req.body
       });
     }
@@ -221,22 +225,13 @@ exports.createScholarship = async (req, res) => {
     const currentUser = await User.findById(req.user._id);
     if (!currentUser) {
       return res.status(401).json({
+        success: false,
         message: 'User not found'
       });
     }
     
     // Use the freshly retrieved user role
     const isAdmin = currentUser.role === 'admin';
-    const status = isAdmin ? 'active' : 'pending_approval';
-    const visible = isAdmin ? true : false;
-    
-    console.log('DEBUG: Setting scholarship properties:', {
-      isAdmin,
-      status,
-      visible,
-      role: currentUser.role,
-      originalRole: req.user.role
-    });
     
     // Process criteria fields
     console.log('DEBUG: Raw criteria from request:', criteria);
@@ -251,6 +246,19 @@ exports.createScholarship = async (req, res) => {
     };
     
     console.log('DEBUG: Processed scholarshipCriteria:', scholarshipCriteria);
+    
+    // Determine status and visibility based on role
+    // Admin-created scholarships should be active and visible
+    const status = isAdmin ? 'active' : 'pending_approval';
+    const visible = isAdmin ? true : false;
+
+    console.log('DEBUG: Setting scholarship properties:', {
+      isAdmin,
+      status,
+      visible,
+      role: currentUser.role,
+      originalRole: req.user.role
+    });
 
     const newScholarship = new Scholarship({
       title: scholarshipTitle,
@@ -266,10 +274,37 @@ exports.createScholarship = async (req, res) => {
       visible
     });
 
-    await newScholarship.save();
+    try {
+      await newScholarship.save();
+      console.log('Successfully saved new scholarship with ID:', newScholarship._id);
+    } catch (saveError) {
+      console.error('Error saving scholarship:', saveError);
+      // Check for validation errors
+      if (saveError.name === 'ValidationError') {
+        const validationErrors = Object.keys(saveError.errors).map(field => ({
+          field,
+          message: saveError.errors[field].message
+        }));
+        
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: validationErrors
+        });
+      }
+      throw saveError; // Re-throw if not a validation error
+    }
     
     // Verify the saved data by retrieving the scholarship from the database again
     const savedScholarship = await Scholarship.findById(newScholarship._id);
+    if (!savedScholarship) {
+      console.error('Could not verify saved scholarship - not found in database after save');
+      return res.status(500).json({
+        success: false,
+        message: 'Scholarship was not properly saved to the database'
+      });
+    }
+    
     console.log('DEBUG: Actual saved scholarship from database:', {
       _id: savedScholarship._id,
       title: savedScholarship.title,

@@ -461,16 +461,20 @@ const DonorDashboard = () => {
           <div className="dashboard-section">
             <div className="section-header">
               <h2>Recent Donations</h2>
-              <Link to="/donor/payment" className="btn btn-primary">
-                <FiFilePlus className="btn-icon" /> Donate to More Students
-              </Link>
+              <div className="header-actions" style={{ display: 'flex', gap: '10px' }}>
+                <Link to="/donor/students" className="btn btn-secondary">
+                  <FiUsers className="btn-icon" /> Browse Eligible Students
+                </Link>
+                <Link to="/donor/payment" className="btn btn-primary">
+                  <FiFilePlus className="btn-icon" /> Donate to More Students
+                </Link>
+              </div>
             </div>
             
             <div className="donations-list">
               {donations.length === 0 ? (
                 <div className="empty-state">
                   <p>You haven't made any donations yet.</p>
-                  <Link to="/donor/students" className="btn btn-secondary">Browse Students</Link>
                 </div>
               ) : (
                 <div className="table-responsive" ref={recentDonationsTableRef}>

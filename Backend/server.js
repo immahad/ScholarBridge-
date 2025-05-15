@@ -14,8 +14,28 @@ const mongoOptions = {
 
 // Connect to MongoDB using local connection by default
 mongoose.connect(config.db.uri, mongoOptions)
-  .then(() => {
+  .then(async () => {
     console.log('✅ Connected to MongoDB database at:', config.db.uri);
+    
+    // Check collections exist
+    try {
+      const collections = await mongoose.connection.db.listCollections().toArray();
+      console.log(`✅ Database has ${collections.length} collections`);
+      
+      // Check if scholarship collection exists
+      const scholarshipCollection = collections.find(c => c.name === 'scholarships');
+      if (scholarshipCollection) {
+        console.log('✅ Scholarships collection found');
+        // Count documents in scholarships collection
+        const count = await mongoose.connection.db.collection('scholarships').countDocuments();
+        console.log(`✅ Scholarships collection contains ${count} documents`);
+      } else {
+        console.log('⚠️ Scholarships collection not found - will be created when first document is saved');
+      }
+    } catch (err) {
+      console.error('❌ Error checking database collections:', err);
+    }
+    
     startServer();
   })
   .catch((err) => {

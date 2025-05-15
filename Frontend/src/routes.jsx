@@ -56,6 +56,7 @@ import AdminReports from './pages/admin/Reports';
 import AdminDonorScholarships from './pages/admin/PendingScholarships';
 import AdminApplications from './pages/admin/Applications';
 import AdminScholarshipView from './pages/admin/ScholarshipView';
+import AdminStudentProfile from './pages/admin/StudentProfile';
 
 // Error pages
 import NotFound from './pages/NotFound';
@@ -123,7 +124,7 @@ const router = createBrowserRouter([
       { path: 'admin/users', element: <SimpleManageUsers /> },
       { path: 'admin/manage-users', element: <SimpleManageUsers /> },
       { path: 'admin/students', element: <AdminBrowseStudents /> },
-      { path: 'admin/students/:studentId', element: <StudentDetail /> },
+      { path: 'admin/students/:id', element: <AdminStudentProfile /> },
       { path: 'admin/reports', element: <AdminReports /> },
       { path: 'admin/applications', element: <AdminApplications /> },
       { path: 'admin/applications/:id', element: <AdminApplications /> },

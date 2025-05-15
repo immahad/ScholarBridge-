@@ -1,81 +1,63 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { FiUser, FiMail, FiPhone, FiCalendar, FiShield, FiEdit, FiX } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthUtils';
-import { FiSave, FiAlertTriangle, FiCheckCircle } from 'react-icons/fi';
+import axios from 'axios';
+import { toast } from 'react-toastify';
+import '../../styles/admin-profile.css';
 
 const AdminProfile = () => {
-  const { token } = useAuth();
-  const [profile, setProfile] = useState({
-    name: '',
-    email: '',
-    role: 'System Administrator',
-    phone: '',
-    lastLogin: ''
-  });
-  
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState(profile);
+  const { user, token } = useAuth();
+  const [profile, setProfile] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+  });
 
-  // Fetch admin profile data on component mount
   useEffect(() => {
-    const fetchProfile = async () => {
+    if (user) {
+      setCurrentUser(user);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const fetchAdminProfile = async () => {
       try {
         setLoading(true);
         const response = await axios.get('/api/admin/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        console.log('Profile API response:', response.data);
-        
-        // Handle different response structures
-        let profileData;
         if (response.data.success) {
-          // Check various possible response structures
-          profileData = response.data.profile || response.data.admin || response.data;
-          
-          // Create a standardized profile object
-          const normalizedProfile = {
-            name: profileData.firstName ? `${profileData.firstName} ${profileData.lastName || ''}`.trim() : profileData.name || 'Admin User',
-            email: profileData.email || '',
-            role: profileData.role || 'System Administrator',
-            phone: profileData.phoneNumber || profileData.phone || '',
-            lastLogin: profileData.lastLogin || profileData.lastLoginAt || new Date()
-          };
-          
-          console.log('Normalized profile:', normalizedProfile);
-          
-          setProfile(normalizedProfile);
-          setFormData(normalizedProfile);
+          setProfile(response.data.admin);
         } else {
-          setError('Failed to load profile data. Please try again later.');
+          toast.error('Failed to load profile data');
         }
       } catch (err) {
-        console.error("Error fetching admin profile:", err);
-        // Fallback to default profile if API fails
-        const defaultProfile = {
-          name: 'Admin User',
-          email: 'admin@example.com',
-          role: 'System Administrator',
-          phone: '',
-          lastLogin: new Date()
-        };
-        setProfile(defaultProfile);
-        setFormData(defaultProfile);
-        setError('Could not connect to server. Showing default profile.');
+        console.error('Failed to fetch admin profile:', err);
+        toast.error('Error loading profile');
       } finally {
         setLoading(false);
       }
     };
 
-    if (token) {
-      fetchProfile();
-    }
+    fetchAdminProfile();
   }, [token]);
 
-  const handleChange = (e) => {
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        phone: user.phone || '',
+      });
+    }
+  }, [user]);
+
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -83,198 +65,181 @@ const AdminProfile = () => {
     }));
   };
 
+  const handleEditProfile = () => {
+    setShowEditModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowEditModal(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
-    setSuccess('');
-    
     try {
-      // Transform form data to match backend API expectations
-      const nameParts = formData.name.split(' ');
-      const firstName = nameParts[0];
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-      
-      const dataToSubmit = {
-        firstName,
-        lastName,
-        email: formData.email,
-        phoneNumber: formData.phone
-      };
-      
-      console.log('Submitting profile update:', dataToSubmit);
-      
-      const response = await axios.put('/api/admin/profile', dataToSubmit, {
+      const response = await axios.put('/api/admin/profile', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (response.data.success) {
-        setProfile(formData);
-        setSuccess('Profile updated successfully!');
-        setIsEditing(false);
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          setSuccess('');
-        }, 3000);
+        toast.success('Profile updated successfully');
+        setCurrentUser(prevUser => ({
+          ...prevUser,
+          ...formData
+        }));
+        setShowEditModal(false);
       } else {
-        setError(response.data.message || 'Failed to update profile.');
+        toast.error(response.data.message || 'Failed to update profile');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred while updating profile.');
-      console.error("Error updating admin profile:", err);
+      console.error('Error updating profile:', err);
+      toast.error('Error updating profile');
     }
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
   if (loading) {
-    return <div className="loading-spinner">Loading profile data...</div>;
+    return (
+      <div className="admin-profile-page">
+        <div className="admin-loading">
+          <div className="admin-loading-spinner"></div>
+        </div>
+      </div>
+    );
   }
 
+  const displayUser = currentUser || user;
+
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Admin Profile</h1>
-      
-      {error && (
-        <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4 flex items-center">
-          <FiAlertTriangle className="mr-2" />
-          {error}
-        </div>
-      )}
-      
-      {success && (
-        <div className="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded mb-4 flex items-center">
-          <FiCheckCircle className="mr-2" />
-          {success}
-        </div>
-      )}
-      
-      {isEditing ? (
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow max-w-2xl">
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Name</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
+    <div className="admin-profile-page">
+      <div className="admin-profile-header">
+        <h1 className="admin-profile-title">Admin Profile</h1>
+      </div>
+
+      <div className="admin-profile-section">
+        <div className="profile-header-content">
+          <div className="profile-avatar">
+            {displayUser?.firstName?.charAt(0) || 'A'}
           </div>
-          
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-              readOnly // Email should not be editable
-            />
-            <small className="text-gray-500">Email cannot be changed</small>
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Phone</label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <button 
-              type="submit" 
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center"
-            >
-              <FiSave className="mr-2" />
-              Save Changes
-            </button>
-            <button 
-              type="button" 
-              className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
-              onClick={() => {
-                setFormData(profile);
-                setIsEditing(false);
-                setError(null);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="bg-white p-6 rounded-lg shadow max-w-2xl">
-          <div className="mb-4">
-            <h2 className="text-gray-500 text-sm">Name</h2>
-            <p className="font-medium">{profile.name}</p>
-          </div>
-          
-          <div className="mb-4">
-            <h2 className="text-gray-500 text-sm">Email</h2>
-            <p className="font-medium">{profile.email}</p>
-          </div>
-          
-          <div className="mb-4">
-            <h2 className="text-gray-500 text-sm">Role</h2>
-            <p className="font-medium">{profile.role}</p>
-          </div>
-          
-          <div className="mb-4">
-            <h2 className="text-gray-500 text-sm">Phone</h2>
-            <p className="font-medium">{profile.phone || 'Not provided'}</p>
-          </div>
-          
-          <div className="mb-6">
-            <h2 className="text-gray-500 text-sm">Last Login</h2>
-            <p className="font-medium">{profile.lastLogin ? new Date(profile.lastLogin).toLocaleString() : 'N/A'}</p>
-          </div>
-          
-          <div className="flex gap-4">
-            <button 
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              onClick={() => setIsEditing(true)}
-            >
-              Edit Profile
-            </button>
-            <button className="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200">
-              Change Password
-            </button>
-          </div>
-        </div>
-      )}
-      
-      <div className="mt-8 bg-white p-6 rounded-lg shadow max-w-2xl">
-        <h2 className="text-xl font-semibold mb-4">Security Settings</h2>
-        
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium">Two-Factor Authentication</h3>
-              <p className="text-sm text-gray-500">Enable two-factor authentication for enhanced security</p>
-            </div>
-            <div className="relative inline-block w-10 mr-2 align-middle select-none">
-              <input type="checkbox" id="toggle" className="sr-only" />
-              <label htmlFor="toggle" className="block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium">Email Notifications</h3>
-              <p className="text-sm text-gray-500">Receive email notifications for important system events</p>
-            </div>
-            <div className="relative inline-block w-10 mr-2 align-middle select-none">
-              <input type="checkbox" id="toggle2" className="sr-only" defaultChecked />
-              <label htmlFor="toggle2" className="block overflow-hidden h-6 rounded-full bg-blue-500 cursor-pointer"></label>
-            </div>
+          <h1 className="profile-name">{displayUser?.firstName} {displayUser?.lastName || 'Admin'}</h1>
+          <div className="profile-email">
+            <FiMail />
+            {displayUser?.email || 'admin@example.com'}
           </div>
         </div>
       </div>
+
+      <div className="admin-profile-section">
+        <h2 className="admin-profile-section-title">Personal Information</h2>
+        <div>
+          <div className="profile-info-item">
+            <span className="profile-info-label">Name</span>
+            <div className="profile-info-value">
+              <FiUser />
+              {displayUser?.firstName} {displayUser?.lastName || 'Admin'}
+            </div>
+          </div>
+
+          <div className="profile-info-item">
+            <span className="profile-info-label">Email</span>
+            <div className="profile-info-value">
+              <FiMail />
+              {displayUser?.email || 'admin@example.com'}
+            </div>
+          </div>
+
+          <div className="profile-info-item">
+            <span className="profile-info-label">Role</span>
+            <div className="profile-info-value">
+              <FiShield />
+              {displayUser?.role || 'admin'}
+            </div>
+          </div>
+
+          <div className="profile-info-item">
+            <span className="profile-info-label">Phone</span>
+            <div className="profile-info-value">
+              <FiPhone />
+              {displayUser?.phone || '0300-123-4567'}
+            </div>
+          </div>
+
+          <div className="profile-info-item">
+            <span className="profile-info-label">Last Login</span>
+            <div className="profile-info-value">
+              <FiCalendar />
+              {formatDate(displayUser?.lastLogin) || formatDate(new Date())}
+            </div>
+          </div>
+
+          <div className="admin-profile-actions">
+            <button className="admin-profile-btn admin-profile-btn-primary" onClick={handleEditProfile}>
+              <FiEdit />
+              Edit Profile
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Edit Profile</h2>
+              <button className="modal-close-btn" onClick={handleCloseModal}>
+                <FiX />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label htmlFor="firstName">First Name</label>
+                <input
+                  type="text"
+                  id="firstName"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="lastName">Last Name</label>
+                <input
+                  type="text"
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="phone">Phone</label>
+                <input
+                  type="text"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="form-actions">
+                <button type="button" className="btn-cancel" onClick={handleCloseModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-submit">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -12,8 +12,10 @@ import {
   FiLoader,
   FiAlertCircle,
   FiCheckCircle,
-  FiCreditCard
+  FiCreditCard,
+  FiInfo
 } from 'react-icons/fi';
+import '../../styles/donor.css';
 
 const DonationDetail = () => {
   const { donationId } = useParams();
@@ -52,31 +54,47 @@ const DonationDetail = () => {
   
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <FiLoader className="animate-spin h-8 w-8 text-blue-500" />
-        <p className="ml-2">Loading donation details...</p>
+      <div className="donor-page">
+        <div className="container">
+          <div className="flex justify-center items-center" style={{ minHeight: '300px' }}>
+            <FiLoader className="animate-spin mr-3" size={24} />
+            <span>Loading donation details...</span>
+          </div>
+        </div>
       </div>
     );
   }
   
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-md">
-        <p className="flex items-center">
-          <FiAlertCircle className="mr-2" />
-          {error}
-        </p>
+      <div className="donor-page">
+        <div className="container">
+          <Link to="/donor/dashboard" className="donor-back-link">
+            <FiArrowLeft /> Back to Dashboard
+          </Link>
+          <div className="donor-card">
+            <div className="donor-badge donor-badge-error">
+              <FiAlertCircle /> {error}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
   
   if (!donation) {
     return (
-      <div className="p-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md">
-        <p className="flex items-center">
-          <FiAlertCircle className="mr-2" />
-          Donation not found.
-        </p>
+      <div className="donor-page">
+        <div className="container">
+          <Link to="/donor/dashboard" className="donor-back-link">
+            <FiArrowLeft /> Back to Dashboard
+          </Link>
+          <div className="donor-card">
+            <div className="donor-badge donor-badge-info">
+              <FiInfo /> Donation not found.
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -96,186 +114,177 @@ const DonationDetail = () => {
   };
   
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6">Donation Details</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Donation Information */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-center mb-6">
-              <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                <FiDollarSign className="text-blue-500 text-4xl" />
-              </div>
-              <h2 className="text-xl font-semibold">{formatCurrency(donation.amount)}</h2>
-              <p className="text-gray-600 flex items-center justify-center mt-1">
-                <FiCalendar className="mr-1" />
-                {formatDate(donation.donationDate)}
-              </p>
-              <div className="mt-4 py-2 px-3 rounded bg-green-100 text-green-800 inline-flex items-center">
-                <FiCheckCircle className="mr-2" />
-                {donation.status === 'completed' ? 'Completed' : donation.status}
-              </div>
-            </div>
-            
-            <div className="border-t pt-4">
-              <h3 className="font-semibold mb-2">Payment Information</h3>
-              <div className="grid grid-cols-1 gap-2">
-                <div>
-                  <p className="text-gray-600 text-sm">Payment Method</p>
-                  <p className="font-medium flex items-center">
-                    <FiCreditCard className="mr-1" />
-                    {donation.paymentMethod || 'Credit Card'}
-                  </p>
-                </div>
-                {donation.transactionId && (
-                  <div>
-                    <p className="text-gray-600 text-sm">Transaction ID</p>
-                    <p className="font-medium">{donation.transactionId}</p>
-                  </div>
-                )}
-                {donation.isAnonymous !== undefined && (
-                  <div>
-                    <p className="text-gray-600 text-sm">Anonymity</p>
-                    <p className="font-medium">{donation.isAnonymous ? 'Anonymous Donation' : 'Public Donation'}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {donation.notes && (
-              <div className="border-t mt-4 pt-4">
-                <h3 className="font-semibold mb-2">Notes</h3>
-                <p className="text-gray-700">{donation.notes}</p>
-              </div>
-            )}
-          </div>
+    <div className="donor-page">
+      <div className="container">
+        <Link to="/donor/dashboard" className="donor-back-link">
+          <FiArrowLeft /> Back to Dashboard
+        </Link>
+        
+        <div className="donor-page-header">
+          <h1 className="donor-page-title">Donation Details</h1>
         </div>
         
-        {/* Recipient Information */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Scholarship Information</h2>
-            
-            {donation.scholarship ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-gray-600">Scholarship Name</p>
-                  <p className="font-semibold">{donation.scholarship.title || 'General Donation'}</p>
-                </div>
-                {donation.scholarship.amount && (
-                  <div>
-                    <p className="text-gray-600">Scholarship Amount</p>
-                    <p className="font-semibold text-green-600 flex items-center">
-                      <FiDollarSign className="mr-1" />
-                      {formatCurrency(donation.scholarship.amount)}
-                    </p>
-                  </div>
-                )}
-                {donation.scholarship.description && (
-                  <div className="md:col-span-2">
-                    <p className="text-gray-600">Description</p>
-                    <p className="text-gray-700">{donation.scholarship.description}</p>
-                  </div>
-                )}
+        <div className="donor-card">
+          <div className="text-center">
+            <div className="donation-icon-circle">
+              <FiDollarSign size={32} />
+            </div>
+            <div className="donation-amount-display">{formatCurrency(donation.amount)}</div>
+            <div className="donation-meta">
+              <FiCalendar /> {formatDate(donation.donationDate)}
+            </div>
+            <div className="mt-3">
+              <div className="donor-badge donor-badge-success">
+                <FiCheckCircle /> {donation.status === 'completed' ? 'Completed' : donation.status}
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-gray-600">Donation Type</p>
-                  <p className="font-semibold">General Donation</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Amount</p>
-                  <p className="font-semibold text-green-600 flex items-center">
-                    <FiDollarSign className="mr-1" />
-                    {formatCurrency(donation.amount)}
-                  </p>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-gray-600">Description</p>
-                  <p className="text-gray-700">General donation to the ScholarBridge Foundation</p>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">Student Information</h2>
-            
-            {donation.student ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-gray-600">Student Name</p>
-                  <p className="font-semibold">
-                    {(donation.student.firstName === 'General' && donation.student.lastName === 'Fund')
-                      ? 'General Fund'
-                      : `${donation.student.firstName || ''} ${donation.student.lastName || ''}`.trim() || 'N/A'}
-                  </p>
+          <div className="donation-divider"></div>
+          
+          <h2 className="donor-card-title">Payment Information</h2>
+          <div className="payment-info-section">
+            <div className="payment-info-grid">
+              <div className="payment-info-item">
+                <div className="donor-label">Payment Method</div>
+                <div className="donor-value donor-icon-text">
+                  <FiCreditCard /> {donation.paymentMethod || 'Credit Card'}
                 </div>
-                {donation.student.institution && donation.student.institution !== 'ScholarBridge Foundation' && (
-                  <div>
-                    <p className="text-gray-600">Institution</p>
-                    <p className="font-semibold flex items-center">
-                      <FiMapPin className="mr-1" />
-                      {donation.student.institution}
-                    </p>
-                  </div>
-                )}
-                {donation.student.program && donation.student.program !== 'General Support' && (
-                  <div>
-                    <p className="text-gray-600">Program</p>
-                    <p className="font-semibold flex items-center">
-                      <FiBook className="mr-1" />
-                      {donation.student.program}
-                    </p>
-                  </div>
-                )}
-                {donation.application && (
-                  <div className="md:col-span-2">
-                    <p className="text-gray-600">Application Status</p>
-                    <p className="font-semibold">{donation.application.status}</p>
-                    {donation.application.fundedAt && (
-                      <p className="text-gray-600 text-sm">
-                        Funded on {formatDate(donation.application.fundedAt)}
-                      </p>
-                    )}
-                  </div>
-                )}
-                {(donation.student.firstName === 'General' && donation.student.lastName === 'Fund') && (
-                  <div className="md:col-span-2">
-                    <p className="text-gray-600">Information</p>
-                    <p className="text-gray-700">
-                      This donation was made to the general fund and will be used to support multiple students.
-                    </p>
-                  </div>
-                )}
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                <div>
-                  <p className="text-gray-600">Donation Type</p>
-                  <p className="font-semibold">General Fund</p>
+              
+              {donation.transactionId && (
+                <div className="payment-info-item">
+                  <div className="donor-label">Transaction ID</div>
+                  <div className="transaction-id">{donation.transactionId}</div>
                 </div>
+              )}
+              
+              {donation.isAnonymous !== undefined && (
+                <div className="payment-info-item">
+                  <div className="donor-label">Anonymity</div>
+                  <div className="donor-value">
+                    {donation.isAnonymous ? 'Anonymous Donation' : 'Public Donation'}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {donation.notes && (
+            <>
+              <div className="donation-divider"></div>
+              <div>
+                <div className="donor-label">Notes</div>
+                <div className="donor-value">{donation.notes}</div>
+              </div>
+            </>
+          )}
+        </div>
+        
+        <div className="donor-card">
+          <h2 className="donor-card-title">Scholarship Information</h2>
+          
+          {donation.scholarship ? (
+            <div className="donation-info-grid">
+              <div>
+                <div className="donor-label">Scholarship Name</div>
+                <div className="donor-value">{donation.scholarship.title || 'General Donation'}</div>
+              </div>
+              
+              {donation.scholarship.amount && (
                 <div>
-                  <p className="text-gray-600">Information</p>
-                  <p className="text-gray-700">
+                  <div className="donor-label">Scholarship Amount</div>
+                  <div className="donor-value donor-icon-text">
+                    <FiDollarSign /> {formatCurrency(donation.scholarship.amount)}
+                  </div>
+                </div>
+              )}
+              
+              {donation.scholarship.description && (
+                <div className="col-span-full">
+                  <div className="donor-label">Description</div>
+                  <div className="donor-value">{donation.scholarship.description}</div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="donation-info-grid">
+              <div>
+                <div className="donor-label">Donation Type</div>
+                <div className="donor-value">General Donation</div>
+              </div>
+              
+              <div>
+                <div className="donor-label">Amount</div>
+                <div className="donor-value donor-icon-text">
+                  <FiDollarSign /> {formatCurrency(donation.amount)}
+                </div>
+              </div>
+              
+              <div className="col-span-full">
+                <div className="donor-label">Description</div>
+                <div className="donor-value">General donation to the ScholarBridge Foundation</div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="donor-card">
+          <h2 className="donor-card-title">Student Information</h2>
+          
+          {donation.student ? (
+            <div className="donation-info-grid">
+              <div>
+                <div className="donor-label">Student Name</div>
+                <div className="donor-value">
+                  {(donation.student.firstName === 'General' && donation.student.lastName === 'Fund')
+                    ? 'General Fund'
+                    : `${donation.student.firstName || ''} ${donation.student.lastName || ''}`.trim() || 'N/A'}
+                </div>
+              </div>
+              
+              {donation.student.institution && donation.student.institution !== 'ScholarBridge Foundation' && (
+                <div>
+                  <div className="donor-label">Institution</div>
+                  <div className="donor-value donor-icon-text">
+                    <FiMapPin /> {donation.student.institution}
+                  </div>
+                </div>
+              )}
+              
+              {donation.student.program && donation.student.program !== 'General Support' && (
+                <div>
+                  <div className="donor-label">Program</div>
+                  <div className="donor-value donor-icon-text">
+                    <FiBook /> {donation.student.program}
+                  </div>
+                </div>
+              )}
+              
+              {donation.application && (
+                <div>
+                  <div className="donor-label">Application Status</div>
+                  <div className="donor-value">{donation.application.status}</div>
+                  {donation.application.fundedAt && (
+                    <div className="donor-value">
+                      Funded on {formatDate(donation.application.fundedAt)}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {(donation.student.firstName === 'General' && donation.student.lastName === 'Fund') && (
+                <div className="col-span-full">
+                  <div className="donor-label">Information</div>
+                  <div className="donor-value">
                     This donation was made to the general fund and will be used to support multiple students.
-                  </p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-          
-          <div className="mt-6">
-            <Link 
-              to="/donor/dashboard" 
-              className="text-blue-600 hover:text-blue-800 font-medium flex items-center"
-            >
-              <FiArrowLeft className="mr-2" />
-              Back to Dashboard
-            </Link>
-          </div>
+              )}
+            </div>
+          ) : (
+            <p>No specific student information available for this donation.</p>
+          )}
         </div>
       </div>
     </div>

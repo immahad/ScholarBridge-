@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const adminDashboardController = require('../controllers/adminDashboardController');
+const adminScholarshipController = require('../controllers/adminScholarshipController');
 const { verifyToken } = require('../middleware/auth');
 const { isAdmin, hasAdminPermission } = require('../middleware/roleCheck');
 
@@ -34,6 +35,9 @@ router.get('/profile', adminController.getProfile);
 
 // Update admin profile
 router.put('/profile', adminController.updateProfile);
+
+// Change admin password
+router.put('/change-password', adminController.changePassword);
 
 // Generate system reports
 router.post(
@@ -68,5 +72,27 @@ router.delete('/scholarships/:id', adminController.deleteScholarship);
 
 // Scholarship approval route
 router.put('/scholarships/:id/review', adminController.reviewScholarship);
+
+// Utility route to fix scholarship visibility and status issues
+router.post('/scholarships/fix', adminScholarshipController.fixScholarships);
+
+// Check database connection (for troubleshooting)
+router.get('/system/db-check', async (req, res) => {
+  try {
+    const { checkDatabaseConnection } = require('../utils/dbCheck');
+    const result = await checkDatabaseConnection();
+    return res.status(200).json({
+      success: true,
+      dbStatus: result
+    });
+  } catch (error) {
+    console.error('Error checking database:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error checking database connection',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;

@@ -251,7 +251,9 @@ exports.reviewScholarship = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, rejectionReason } = req.body;
-    const adminId = req.user.userId;
+    const adminId = req.user._id; // Changed from userId to _id to match the actual user ID
+    
+    console.log(`Reviewing scholarship ${id} with status ${status} by admin ${adminId}`);
     
     // Validate status
     if (!['approved', 'rejected'].includes(status)) {
@@ -270,6 +272,8 @@ exports.reviewScholarship = async (req, res) => {
         message: 'Scholarship not found'
       });
     }
+    
+    console.log(`Found scholarship: ${scholarship.title}, current status: ${scholarship.status}, visible: ${scholarship.visible}`);
     
     // Check if scholarship is pending approval
     if (scholarship.status !== 'pending_approval') {
@@ -296,11 +300,13 @@ exports.reviewScholarship = async (req, res) => {
     try {
       // Update scholarship
       if (status === 'approved') {
+        console.log(`Setting scholarship ${id} to active and visible`);
         scholarship.status = 'active';
         scholarship.visible = true;
         scholarship.approvedBy = adminId;
         scholarship.approvedAt = new Date();
       } else {
+        console.log(`Setting scholarship ${id} to rejected`);
         scholarship.status = 'rejected';
         scholarship.rejectionReason = rejectionReason;
         scholarship.approvedBy = adminId;
@@ -308,6 +314,12 @@ exports.reviewScholarship = async (req, res) => {
       }
       
       await scholarship.save({ session });
+      
+      console.log(`Scholarship updated: status=${scholarship.status}, visible=${scholarship.visible}`);
+      
+      // Double-check the update took effect
+      const updatedScholarship = await Scholarship.findById(id);
+      console.log(`Verification - scholarship after save: status=${updatedScholarship.status}, visible=${updatedScholarship.visible}`);
       
       // Create notification for creator
       const notification = new Notification({
@@ -338,26 +350,38 @@ exports.reviewScholarship = async (req, res) => {
       const admin = await Admin.findById(adminId);
       
       if (admin) {
-        admin.activities.push({
-          action: `scholarship_${status}`,
-          details: {
-            scholarshipId: scholarship._id,
-            title: scholarship.title,
-            creatorId: creator._id
-          },
-          timestamp: new Date()
-        });
-        
-        await admin.save({ session });
+        try {
+          // Use 'review_scholarship' as the action which is in the enum
+          admin.activities.push({
+            action: 'review_scholarship',
+            details: {
+              scholarshipId: scholarship._id,
+              title: scholarship.title,
+              creatorId: creator._id,
+              decision: status // Add the decision as a detail rather than in the action
+            },
+            timestamp: new Date()
+          });
+          
+          await admin.save({ session });
+          console.log('Admin activity logged successfully');
+        } catch (activityError) {
+          console.error('Error logging admin activity:', activityError);
+          // Continue with transaction even if activity logging fails
+        }
       }
       
       // Commit transaction
       await session.commitTransaction();
       
+      // Verify the scholarship status after transaction is committed
+      const verifiedScholarship = await Scholarship.findById(id);
+      console.log(`Final verification after transaction: status=${verifiedScholarship.status}, visible=${verifiedScholarship.visible}`);
+      
       return res.status(200).json({
         success: true,
         message: `Scholarship ${status === 'approved' ? 'approved' : 'rejected'} successfully`,
-        scholarship
+        scholarship: verifiedScholarship
       });
     } catch (error) {
       // Abort transaction on error
@@ -372,6 +396,66 @@ exports.reviewScholarship = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to review scholarship',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Fix incorrectly configured scholarships
+ * @route POST /api/admin/scholarships/fix
+ * @access Private (Admin only)
+ */
+exports.fixScholarships = async (req, res) => {
+  try {
+    // Ensure the user is an admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to perform this action'
+      });
+    }
+    
+    console.log('Starting scholarship repair process from admin controller');
+    
+    // Use the static method we added to the Scholarship model
+    const fixResults = await Scholarship.fixAllScholarships();
+    
+    console.log('Scholarship fix results:', fixResults);
+    
+    // Log admin activity
+    const admin = await Admin.findById(req.user._id);
+    if (admin) {
+      try {
+        admin.activities.push({
+          action: 'other',
+          details: {
+            action: 'fix_scholarships',
+            fixedCount: fixResults.totalFixed
+          },
+          timestamp: new Date()
+        });
+        
+        await admin.save();
+      } catch (activityError) {
+        console.error('Error logging admin activity:', activityError);
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Scholarship fix completed',
+      fixed: {
+        activeFixCount: fixResults.activeFixed,
+        approvedFixCount: fixResults.approvedFixed,
+        totalFixed: fixResults.totalFixed
+      }
+    });
+  } catch (error) {
+    console.error('Error fixing scholarships:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fix scholarships',
       error: error.message
     });
   }

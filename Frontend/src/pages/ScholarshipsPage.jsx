@@ -15,6 +15,8 @@ const ScholarshipsPage = () => {
     minAmount: '',
     maxAmount: '',
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const { token, user } = useAuth();
   const navigate = useNavigate();
 
@@ -31,18 +33,33 @@ const ScholarshipsPage = () => {
         setLoading(true);
         // Only fetch scholarships if the user is a student
         if (isStudent) {
+          console.log('Fetching scholarships for student...');
           const response = await axios.get('/api/students/scholarships', {
+            params: { 
+              limit: 20, // Changed from 100 to 20 for testing pagination
+              page: currentPage
+            },
             headers: { Authorization: `Bearer ${token}` }
           });
           
           console.log('Scholarships API response:', response.data);
           
           if (response.data.success) {
+            if (response.data.scholarships.length === 0) {
+              console.log('No scholarships returned from API');
+            } else {
+              console.log(`Received ${response.data.scholarships.length} scholarships`);
+            }
             setScholarships(response.data.scholarships);
+            if (response.data.totalPages) {
+              setTotalPages(response.data.totalPages);
+            }
           } else {
+            console.error('API returned failure:', response.data);
             setError('Failed to load scholarships');
           }
         } else {
+          console.log('User is not a student, not fetching scholarships');
           // Set loading to false for non-student users since we're not fetching data
           setLoading(false);
         }
@@ -56,7 +73,7 @@ const ScholarshipsPage = () => {
     };
 
     fetchScholarships();
-  }, [token, isStudent]);
+  }, [token, isStudent, currentPage]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -216,6 +233,40 @@ const ScholarshipsPage = () => {
                 placeholder="Max"
               />
             </div>
+            
+            <div className="filter-group">
+              {totalPages > 1 && (
+                <button 
+                  onClick={async () => {
+                    try {
+                      setLoading(true);
+                      // Fetch all scholarships without pagination
+                      const response = await axios.get('/api/students/scholarships', {
+                        params: { 
+                          limit: 1000, // Set a very high limit to get all scholarships
+                          nopage: true  // Signal to backend not to paginate
+                        },
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      if (response.data.success) {
+                        setScholarships(response.data.scholarships);
+                        console.log(`Loaded all ${response.data.scholarships.length} scholarships`);
+                      }
+                    } catch (err) {
+                      console.error('Failed to fetch all scholarships:', err);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="btn btn-secondary"
+                  style={{ marginTop: '1rem', width: '100%' }}
+                  disabled={loading}
+                >
+                  Show All Scholarships
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -230,12 +281,24 @@ const ScholarshipsPage = () => {
           ) : filteredScholarships.length === 0 ? (
             <div className="no-results">
               <p>No scholarships found matching your criteria.</p>
-              <button onClick={() => {
-                setSearchTerm('');
-                setFilters({ category: '', minAmount: '', maxAmount: '' });
-              }} className="btn btn-primary">
-                Reset Filters
-              </button>
+              {scholarships.length === 0 ? (
+                <div>
+                  <p>There are currently no active scholarships available. Please check back later.</p>
+                  <p>Some common reasons:</p>
+                  <ul style={{ listStyleType: 'disc', paddingLeft: '20px', marginTop: '10px' }}>
+                    <li>Scholarships might still be under review</li>
+                    <li>No scholarships have been created yet</li>
+                    <li>All available scholarships might have expired</li>
+                  </ul>
+                </div>
+              ) : (
+                <button onClick={() => {
+                  setSearchTerm('');
+                  setFilters({ category: '', minAmount: '', maxAmount: '' });
+                }} className="btn btn-primary">
+                  Reset Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="scholarships-grid">
@@ -266,6 +329,78 @@ const ScholarshipsPage = () => {
                   </div>
                 </div>
               ))}
+              
+              {/* Pagination Controls - Only show if totalPages > 1 */}
+              {totalPages > 1 && (
+                <div className="pagination-container" style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
+                  <div className="pagination">
+                    <button 
+                      onClick={() => {
+                        if (currentPage > 1) {
+                          setCurrentPage(currentPage - 1);
+                          window.scrollTo(0, 0);
+                        }
+                      }}
+                      disabled={currentPage === 1}
+                      className="pagination-button"
+                      style={{ 
+                        padding: '0.5rem 1rem', 
+                        marginRight: '0.5rem',
+                        backgroundColor: currentPage === 1 ? '#f0f0f0' : '#007bff',
+                        color: currentPage === 1 ? '#888' : 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: currentPage === 1 ? 'default' : 'pointer'
+                      }}
+                    >
+                      Prev
+                    </button>
+                    
+                    {[...Array(totalPages)].map((_, index) => (
+                      <button
+                        key={index + 1}
+                        onClick={() => {
+                          setCurrentPage(index + 1);
+                          window.scrollTo(0, 0);
+                        }}
+                        className={`pagination-number ${currentPage === index + 1 ? 'active' : ''}`}
+                        style={{ 
+                          padding: '0.5rem 1rem', 
+                          margin: '0 0.25rem',
+                          backgroundColor: currentPage === index + 1 ? '#0056b3' : '#007bff',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                    
+                    <button 
+                      onClick={() => {
+                        if (currentPage < totalPages) {
+                          setCurrentPage(currentPage + 1);
+                          window.scrollTo(0, 0);
+                        }
+                      }}
+                      disabled={currentPage === totalPages}
+                      className="pagination-button"
+                      style={{ 
+                        padding: '0.5rem 1rem', 
+                        marginLeft: '0.5rem',
+                        backgroundColor: currentPage === totalPages ? '#f0f0f0' : '#007bff',
+                        color: currentPage === totalPages ? '#888' : 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: currentPage === totalPages ? 'default' : 'pointer'
+                      }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

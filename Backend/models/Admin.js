@@ -15,6 +15,8 @@ const activitySchema = new mongoose.Schema({
       'create_scholarship', 
       'update_scholarship',
       'delete_scholarship',
+      'scholarship_approved',
+      'scholarship_rejected',
       'review_scholarship',
       'generate_report',
       'update_profile',
