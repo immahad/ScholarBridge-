@@ -351,57 +351,104 @@ exports.sendApplicationStatusEmail = async (application, student, scholarship) =
 
 /**
  * Send donation confirmation email
- * @param {Object} payment - Payment data
+ * @param {Object} payment - Payment data with studentId and scholarshipId for specific donations
  * @param {Object} donor - Donor data
- * @param {Object} scholarship - Scholarship data
- * @param {Object} student - Student data
+ * @param {Object} scholarship - Scholarship data (optional for general donations)
+ * @param {Object} student - Student data (optional for general donations)
  * @returns {Promise<Boolean>} - Success status
  */
 exports.sendDonationConfirmationEmail = async (payment, donor, scholarship, student) => {
   const { email, firstName } = donor;
-  const { title } = scholarship;
-  const { amount, transactionId } = payment;
+  const { amount, transactionId, type, isAnonymous } = payment;
   
-  const subject = 'Thank You for Your Scholarship Donation';
+  // Different email content based on donation type
+  let subject, text, html;
   
-  const studentName = student && !payment.isAnonymous ? `${student.firstName} ${student.lastName}` : 'a deserving student';
-  
-  const text = `
-    Hello ${firstName},
+  if (type === 'student_scholarship') {
+    // This is a donation to a specific student's scholarship
+    const { title } = scholarship;
     
-    Thank you for your generous donation of $${amount.toFixed(2)} to fund the "${title}" scholarship for ${studentName}.
+    subject = 'Thank You for Your Scholarship Donation';
     
-    Transaction ID: ${transactionId}
-    Date: ${new Date().toLocaleDateString()}
-    Amount: $${amount.toFixed(2)}
+    const studentName = student && !isAnonymous ? `${student.firstName} ${student.lastName}` : 'a deserving student';
     
-    Your generosity will help make education accessible and affordable for students in need.
-    
-    You can view your donation history by logging into your account at ${config.frontendUrl}.
-    
-    Thank you,
-    Scholarship Management System Team
-  `;
-  
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Thank You for Your Scholarship Donation</h2>
-      <p>Hello ${firstName},</p>
-      <p>Thank you for your generous donation of <strong>$${amount.toFixed(2)}</strong> to fund the "${title}" scholarship for ${studentName}.</p>
+    text = `
+      Hello ${firstName},
       
-      <div style="background-color: #f8f9fa; border-radius: 4px; padding: 15px; margin: 20px 0;">
-        <p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${transactionId}</p>
-        <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-        <p style="margin: 5px 0;"><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+      Thank you for your generous donation of $${amount.toFixed(2)} to fund the "${title}" scholarship for ${studentName}.
+      
+      Transaction ID: ${transactionId}
+      Date: ${new Date().toLocaleDateString()}
+      Amount: $${amount.toFixed(2)}
+      
+      Your generosity will help make education accessible and affordable for students in need.
+      
+      You can view your donation history by logging into your account at ${config.frontendUrl}.
+      
+      Thank you,
+      Scholarship Management System Team
+    `;
+    
+    html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Thank You for Your Scholarship Donation</h2>
+        <p>Hello ${firstName},</p>
+        <p>Thank you for your generous donation of <strong>$${amount.toFixed(2)}</strong> to fund the "${title}" scholarship for ${studentName}.</p>
+        
+        <div style="background-color: #f8f9fa; border-radius: 4px; padding: 15px; margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${transactionId}</p>
+          <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+          <p style="margin: 5px 0;"><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+        </div>
+        
+        <p>Your generosity will help make education accessible and affordable for students in need.</p>
+        
+        <p>You can view your donation history by logging into your account at <a href="${config.frontendUrl}">${config.frontendUrl}</a>.</p>
+        
+        <p>Thank you,<br>Scholarship Management System Team</p>
       </div>
+    `;
+  } else {
+    // This is a general donation
+    subject = 'Thank You for Your Donation';
+    
+    text = `
+      Hello ${firstName},
       
-      <p>Your generosity will help make education accessible and affordable for students in need.</p>
+      Thank you for your generous donation of $${amount.toFixed(2)} to support our platform.
       
-      <p>You can view your donation history by logging into your account at <a href="${config.frontendUrl}">${config.frontendUrl}</a>.</p>
+      Transaction ID: ${transactionId}
+      Date: ${new Date().toLocaleDateString()}
+      Amount: $${amount.toFixed(2)}
       
-      <p>Thank you,<br>Scholarship Management System Team</p>
-    </div>
-  `;
+      Your contribution helps us maintain and improve our platform, making education more accessible to students worldwide.
+      
+      You can view your donation history by logging into your account at ${config.frontendUrl}.
+      
+      Thank you for your support,
+      Scholarship Management System Team
+    `;
+    
+    html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Thank You for Your Donation</h2>
+        <p>Hello ${firstName},</p>
+        <p>Thank you for your generous donation of <strong>$${amount.toFixed(2)}</strong> to support our platform.</p>
+        
+        <div style="background-color: #f8f9fa; border-radius: 4px; padding: 15px; margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${transactionId}</p>
+          <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+          <p style="margin: 5px 0;"><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+        </div>
+        
+        <p>Your contribution helps us maintain and improve our platform, making education more accessible to students worldwide.</p>
+        
+        <p>You can view your donation history by logging into your account at <a href="${config.frontendUrl}">${config.frontendUrl}</a>.</p>
+        
+        <p>Thank you for your support,<br>Scholarship Management System Team</p>
+      </div>
+    `;
+  }
   
   return await sendEmail({
     to: email,
@@ -554,8 +601,33 @@ exports.sendGeneralDonationConfirmationEmail = async (payment, donor) => {
     Scholarship Management System Team
   `;
   
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Thank You for Your Donation</h2>
+      <p>Hello ${firstName},</p>
+      <p>Thank you for your generous donation of <strong>$${amount.toFixed(2)}</strong> to support our platform.</p>
+      
+      <div style="background-color: #f8f9fa; border-radius: 4px; padding: 15px; margin: 20px 0;">
+        <p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${transactionId}</p>
+        <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+        <p style="margin: 5px 0;"><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+      </div>
+      
+      <p>Your contribution helps us maintain and improve our platform, making education more accessible to students worldwide.</p>
+      
+      <p>You can view your donation history by logging into your account at <a href="${config.frontendUrl}">${config.frontendUrl}</a>.</p>
+      
+      <p>Thank you for your support,<br>Scholarship Management System Team</p>
+    </div>
+  `;
+  
   try {
-    await sendEmail(email, subject, text);
+    await sendEmail({
+      to: email,
+      subject,
+      text,
+      html
+    });
     return true;
   } catch (error) {
     console.error('Send general donation confirmation email error:', error);
@@ -647,4 +719,75 @@ exports.sendScholarshipNotification = async (user, scholarship, subject, html) =
     console.error('Error in sendScholarshipNotification:', error);
     return false;
   }
+};
+
+/**
+ * Send scholarship funded notification to student
+ * @param {Object} student - Student data
+ * @param {Object} scholarship - Scholarship data
+ * @param {Object} payment - Payment data
+ * @param {Object} donor - Donor data (may be null if anonymous)
+ * @returns {Promise<Boolean>} - Success status
+ */
+exports.sendScholarshipFundedEmail = async (student, scholarship, payment, donor) => {
+  const { email, firstName } = student;
+  const { title, amount } = scholarship;
+  const { isAnonymous } = payment;
+  
+  const subject = 'Congratulations! Your Scholarship Has Been Funded';
+  
+  let donorInfo = '';
+  if (!isAnonymous && donor) {
+    donorInfo = `
+      <p>Your scholarship was funded by ${donor.firstName} ${donor.lastName}.</p>
+    `;
+  }
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Congratulations! Your Scholarship Has Been Funded</h2>
+      <p>Hello ${firstName},</p>
+      <p>We are thrilled to inform you that your application for the "${title}" scholarship has been funded!</p>
+      
+      <div style="background-color: #f8f9fa; border-radius: 4px; padding: 15px; margin: 20px 0;">
+        <p style="margin: 5px 0;"><strong>Scholarship:</strong> ${title}</p>
+        <p style="margin: 5px 0;"><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+        <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+      </div>
+      
+      ${donorInfo}
+      
+      <p>Please log into your account at <a href="${config.frontendUrl}">${config.frontendUrl}</a> for more details about the funding and next steps.</p>
+      
+      <p>Congratulations once again!</p>
+      
+      <p>Thank you,<br>Scholarship Management System Team</p>
+    </div>
+  `;
+  
+  const text = `
+    Hello ${firstName},
+    
+    We are thrilled to inform you that your application for the "${title}" scholarship has been funded!
+    
+    Scholarship: ${title}
+    Amount: $${amount.toFixed(2)}
+    Date: ${new Date().toLocaleDateString()}
+    
+    ${!isAnonymous && donor ? `Your scholarship was funded by ${donor.firstName} ${donor.lastName}.` : ''}
+    
+    Please log into your account at ${config.frontendUrl} for more details about the funding and next steps.
+    
+    Congratulations once again!
+    
+    Thank you,
+    Scholarship Management System Team
+  `;
+  
+  return await sendEmail({
+    to: email,
+    subject,
+    text,
+    html
+  });
 };

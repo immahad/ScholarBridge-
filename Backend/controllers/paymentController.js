@@ -170,6 +170,9 @@ exports.makeDonation = async (req, res) => {
       });
     }
     
+    // Set payment type to student_scholarship for student-specific donations
+    const paymentType = 'student_scholarship';
+    
     // Use the payment transactions service to process the scholarship payment
     const result = await processScholarshipPayment({
       donorId,
@@ -180,6 +183,7 @@ exports.makeDonation = async (req, res) => {
       transactionId,
       isAnonymous: isAnonymous || false,
       notes: notes || '',
+      type: paymentType,
       session
     });
     
@@ -508,21 +512,19 @@ async function sendDonationEmails(payment) {
       scholarship = await Scholarship.findById(payment.scholarshipId);
     }
     
-    // Send confirmation email to donor
-    await emailService.sendDonationConfirmationEmail(payment, donor, scholarship, student);
-    
-    // Send notification to student
-    // Update the student's application status
-    const studentApp = student.scholarshipApplications.find(
-      app => app.scholarshipId.toString() === scholarship._id.toString()
-    );
-    
-    if (studentApp) {
-      studentApp.status = 'funded';
-      await student.save();
+    // Based on the payment type, send different emails
+    if (payment.type === 'student_scholarship') {
+      // Send confirmation email to donor for student scholarship donation
+      await emailService.sendDonationConfirmationEmail(payment, donor, scholarship, student);
       
-      // Send application status email
-      await emailService.sendApplicationStatusEmail(studentApp, student, scholarship);
+      // Send notification to student about their funded scholarship
+      await emailService.sendScholarshipFundedEmail(student, scholarship, payment, payment.isAnonymous ? null : donor);
+      
+      console.log('Sent student scholarship donation emails to donor and student');
+    } else {
+      // Send general donation confirmation to donor
+      await emailService.sendGeneralDonationConfirmationEmail(payment, donor);
+      console.log('Sent general donation confirmation email to donor');
     }
   } catch (error) {
     console.error('Send donation emails error:', error);
@@ -1067,22 +1069,26 @@ exports.recordGeneralDonation = async (req, res) => {
       isAnonymous: isAnonymous || false,
       notes: notes || 'General platform donation',
       type: 'general_donation',
-      status: 'completed'
+      status: 'completed',
+      completedDate: new Date()
     });
     
     await payment.save({ session });
     
     // Update donor's total donations
-    await Donor.findByIdAndUpdate(
+    const donor = await Donor.findByIdAndUpdate(
       donorId,
       {
         $inc: { totalDonated: amount },
         $push: { donations: payment._id }
       },
-      { session }
+      { session, new: true }
     );
     
     await session.commitTransaction();
+    
+    // Send confirmation email for general donation
+    await emailService.sendGeneralDonationConfirmationEmail(payment, donor);
     
     res.status(200).json({
       success: true,

@@ -26,7 +26,8 @@ exports.processScholarshipPayment = async (paymentData) => {
       paymentMethod,
       transactionId,
       notes,
-      isAnonymous
+      isAnonymous,
+      type
     } = paymentData;
     
     // 1. Create the payment record
@@ -41,6 +42,7 @@ exports.processScholarshipPayment = async (paymentData) => {
       completedDate: new Date(),
       notes,
       isAnonymous,
+      type: type || 'general_donation', // Store the payment type
       history: [{
         status: 'completed',
         date: new Date(),
@@ -69,6 +71,10 @@ exports.processScholarshipPayment = async (paymentData) => {
     student.scholarshipApplications[applicationIndex].fundedBy = donorId;
     student.scholarshipApplications[applicationIndex].fundedAt = new Date();
     
+    // Add payment details to the application
+    student.scholarshipApplications[applicationIndex].paymentId = payment._id;
+    student.scholarshipApplications[applicationIndex].donorIsAnonymous = isAnonymous;
+    
     await student.save({ session });
     
     // 3. Update donor's donation history
@@ -88,7 +94,8 @@ exports.processScholarshipPayment = async (paymentData) => {
       status: 'completed',
       donationDate: new Date(),
       notes,
-      isAnonymous
+      isAnonymous,
+      type: type || 'general_donation'
     });
     
     // Update total donated amount
@@ -110,8 +117,9 @@ exports.processScholarshipPayment = async (paymentData) => {
     // Commit the transaction
     await session.commitTransaction();
     
-    // Return the payment with donor and student info
+    // Return the payment with success flag and related data
     return {
+      success: true,
       payment,
       student: {
         _id: student._id,
@@ -129,7 +137,11 @@ exports.processScholarshipPayment = async (paymentData) => {
   } catch (error) {
     // Abort transaction on error
     await session.abortTransaction();
-    throw error;
+    console.error('Process scholarship payment error:', error);
+    return {
+      success: false,
+      message: error.message
+    };
   } finally {
     // End session
     session.endSession();
