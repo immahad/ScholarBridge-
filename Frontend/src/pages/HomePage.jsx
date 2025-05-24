@@ -183,7 +183,7 @@ const HomePage = () => {
             <h2 className="cta-title">Ready to Start Your Journey?</h2>
             <p className="cta-description">
               Whether you're looking for financial support or want to help students achieve their dreams, 
-              ScholarSync is here to make a difference in education.
+              ScholarBridge is here to make a difference in education.
             </p>
             <div className="cta-buttons">
               <Link to="/register?role=student" className="btn btn-primary">

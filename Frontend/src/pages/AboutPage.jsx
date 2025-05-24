@@ -5,9 +5,9 @@ const AboutPage = () => {
   return (
     <div className="about-page">
       <div className="container">
-        <h1 className="page-title">About ScholarSync</h1>
+        <h1 className="page-title">About ScholarBridge</h1>
         <p className="page-description">
-          ScholarSync is a comprehensive scholarship management system designed to connect students with educational funding opportunities.
+          ScholarBridge is a comprehensive scholarship management system designed to connect students with educational funding opportunities.
         </p>
         
         <section className="about-section">
@@ -21,7 +21,7 @@ const AboutPage = () => {
         <section className="about-section">
           <h2>What We Do</h2>
           <p>
-            ScholarSync provides a platform for:
+            ScholarBridge provides a platform for:
           </p>
           <ul className="feature-list">
             <li>Students to discover and apply for scholarships tailored to their profile</li>

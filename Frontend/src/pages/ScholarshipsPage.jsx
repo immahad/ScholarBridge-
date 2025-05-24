@@ -353,7 +353,7 @@ const ScholarshipsPage = () => {
                         cursor: currentPage === 1 ? 'default' : 'pointer'
                       }}
                     >
-                      Previous
+                      Prev
                     </button>
                     
                     {[...Array(totalPages)].map((_, index) => (
