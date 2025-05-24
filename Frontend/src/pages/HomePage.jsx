@@ -69,7 +69,7 @@ const HomePage = () => {
           <div className="hero-content">
             <h1 className="hero-title">Find the Perfect Scholarship for Your Education</h1>
             <p className="hero-description">
-              ScholarSync connects students with donors to make higher education more accessible and affordable.
+              ScholarBridge connects students with donors to make higher education more accessible and affordable.
             </p>
             <div className="hero-buttons">
               <Link to="/scholarships" className="btn btn-primary">

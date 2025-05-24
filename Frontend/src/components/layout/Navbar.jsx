@@ -55,7 +55,7 @@ const Navbar = () => {
       <div className="container navbar-container">
         <Link to="/" className="navbar-logo">
           <img src="/images/ScholarBridge-Logo.png" alt="ScholarBridge" className="logo-img" />
-          <span className="logo-text">ScholarSync</span>
+          <span className="logo-text">ScholarBridge</span>
         </Link>
 
         <div className="mobile-toggle" onClick={toggleMenu}>
